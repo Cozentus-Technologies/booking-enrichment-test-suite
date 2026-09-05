@@ -1,0 +1,137 @@
+# CI pipeline for the booking-enrichment black-box test suite.
+#
+# This workflow only knows how to start a broker, start a service instance
+# built from a separate checkout, wait for both, and run the suite against
+# them by URL/hostname (TEST_SUITE_SPEC.md section 9.1, "ci" profile). It
+# never builds or imports the service as a dependency of this repository —
+# that would defeat the black-box boundary pom.xml enforces at compile time.
+#
+# SERVICE_REPO / SERVICE_REF below point at wherever the city-enrichment
+# service actually lives; adjust once that location is finalised.
+name: test-suite
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # Nightly volume suite (TEST_SUITE_SPEC.md section 9.4: unbounded budget,
+    # not part of the per-commit fast path). Adjust the hour to the agreed
+    # maintenance window.
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "run-tests.sh profile to execute"
+        required: false
+        default: full
+        type: choice
+        options: [smoke, functional, contract, full, nightly]
+
+env:
+  SERVICE_REPO: DSV-test-assignement
+  SERVICE_REF: main
+
+jobs:
+  fast:
+    # @smoke and @functional-and-@critical on every push/PR — the two-minute
+    # budget in TEST_SUITE_SPEC.md section 9.4.
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Start broker
+        run: docker compose -f docker-compose.override.yml up -d --wait
+
+      - name: Checkout and start the service under test
+        run: |
+          git clone --depth 1 --branch "$SERVICE_REF" \
+            "https://github.com/\${{ github.repository_owner }}/$SERVICE_REPO.git" service
+          cd service
+          mvn -q -DskipTests package
+          KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
+            nohup java -jar target/*.jar > ../service.log 2>&1 &
+          echo $! > ../service.pid
+
+      - name: Wait for readiness
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8081/ready; then exit 0; fi
+            sleep 1
+          done
+          echo "service did not become ready in time"; cat service.log; exit 1
+
+      - name: Run suite
+        run: ./run-tests.sh functional
+
+      - name: Stop service
+        if: always()
+        run: kill "$(cat service.pid)" 2>/dev/null || true
+
+      - name: Publish reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cucumber-reports
+          path: |
+            target/cucumber-reports/
+            target/allure-results/
+            target/scenario-coverage.md
+
+  nightly:
+    # @nightly volume suite — unbounded budget, scheduled separately from the
+    # fast per-commit slice above.
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.profile == 'nightly')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Start broker
+        run: docker compose -f docker-compose.override.yml up -d --wait
+
+      - name: Checkout and start the service under test
+        run: |
+          git clone --depth 1 --branch "$SERVICE_REF" \
+            "https://github.com/\${{ github.repository_owner }}/$SERVICE_REPO.git" service
+          cd service
+          mvn -q -DskipTests package
+          KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
+            nohup java -jar target/*.jar > ../service.log 2>&1 &
+          echo $! > ../service.pid
+
+      - name: Wait for readiness
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8081/ready; then exit 0; fi
+            sleep 1
+          done
+          echo "service did not become ready in time"; cat service.log; exit 1
+
+      - name: Run nightly (volume) suite
+        run: ./run-tests.sh nightly
+
+      - name: Stop service
+        if: always()
+        run: kill "$(cat service.pid)" 2>/dev/null || true
+
+      - name: Publish reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cucumber-reports-nightly
+          path: |
+            target/cucumber-reports/
+            target/allure-results/
+            target/scenario-coverage.md

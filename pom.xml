@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.cozentus.enrichment</groupId>
+  <artifactId>booking-enrichment-test-suite</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>booking-enrichment-test-suite</name>
+  <description>
+    Independent black-box BDD test suite for the booking city-enrichment service.
+    Verifies behaviour exclusively through the Kafka message contract on
+    booking.raw / booking.enriched / booking.flagged and the GET /ready endpoint.
+  </description>
+
+  <!--
+    ============================================================================
+    DELIBERATE ABSENCE: there is no dependency on com.cozentus:city-enrichment
+    (the system under test) anywhere in this file, and there must never be one.
+
+    This suite is a *black-box* suite: it knows the service only through its
+    external Kafka interface and its published JSON schemas. If a dependency on
+    the service artifact is ever added, any test that imports a service class
+    will compile, and the black-box boundary becomes a promise instead of a
+    fact the build enforces. The absence of that dependency is what makes the
+    black-box claim physical rather than promised — see TEST_SUITE_SPEC.md §1.2
+    and §2 ("Structural rule enforced by the build").
+
+    Do not add it. If the suite ever needs something from the service, that
+    need should be met by a published contract (schema, topic, config value),
+    not by a compile-time dependency.
+    ============================================================================
+  -->
+
+  <properties>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- Dependency versions, pinned explicitly rather than left to BOM drift. -->
+    <junit-bom.version>5.11.3</junit-bom.version>
+    <cucumber-bom.version>7.20.1</cucumber-bom.version>
+    <junit-platform-suite.version>1.11.3</junit-platform-suite.version>
+    <assertj.version>3.26.3</assertj.version>
+    <kafka-clients.version>3.9.0</kafka-clients.version>
+    <jackson.version>2.18.2</jackson.version>
+    <json-schema-validator.version>1.5.4</json-schema-validator.version>
+    <allure.version>2.29.0</allure.version>
+
+    <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
+    <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+
+    <!-- Bulk/volume run overrides, read by VolumeDataGenerator / VolumeSteps. -->
+    <bulk.count>1000</bulk.count>
+    <bulk.seed>42</bulk.seed>
+
+    <!-- Which test-config properties file under src/test/resources/config is active. -->
+    <suite.env>local</suite.env>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>${junit-bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.cucumber</groupId>
+        <artifactId>cucumber-bom</artifactId>
+        <version>${cucumber-bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- ==================== BDD ==================== -->
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-java</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-junit-platform-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-picocontainer</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- ==================== JUnit 5 / launcher ==================== -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-suite</artifactId>
+      <version>${junit-platform-suite.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- ==================== Assertions ==================== -->
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>${assertj.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- ==================== Kafka client (harness only, see SPEC §3/§4) ==================== -->
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
+      <version>${kafka-clients.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- ==================== JSON ==================== -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jsr310</artifactId>
+      <version>${jackson.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- ==================== JSON Schema validation (contract layer) ==================== -->
+    <dependency>
+      <groupId>com.networknt</groupId>
+      <artifactId>json-schema-validator</artifactId>
+      <version>${json-schema-validator.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- ==================== Reporting ==================== -->
+    <dependency>
+      <groupId>io.qameta.allure</groupId>
+      <artifactId>allure-cucumber7-jvm</artifactId>
+      <version>${allure.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${maven-compiler-plugin.version}</version>
+        <configuration>
+          <release>21</release>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven-surefire-plugin.version}</version>
+        <configuration>
+          <!-- Cucumber runs through the JUnit Platform engine; RunCucumberTest
+               is the single entry point surefire discovers. -->
+          <includes>
+            <include>**/RunCucumberTest.java</include>
+          </includes>
+          <systemPropertyVariables>
+            <suite.env>${suite.env}</suite.env>
+            <bulk.count>${bulk.count}</bulk.count>
+            <bulk.seed>${bulk.seed}</bulk.seed>
+            <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!--
+      suite.env selects src/test/resources/config/test-<env>.properties.
+      ci activates test-ci.properties; local (the default) uses test-local.properties.
+    -->
+    <profile>
+      <id>ci</id>
+      <properties>
+        <suite.env>ci</suite.env>
+      </properties>
+    </profile>
+
+    <!-- Nightly / volume runs: larger bulk.count, no time-budget enforcement. -->
+    <profile>
+      <id>nightly</id>
+      <properties>
+        <bulk.count>20000</bulk.count>
+      </properties>
+    </profile>
+  </profiles>
+
+</project>
