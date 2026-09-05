@@ -111,3 +111,29 @@ the scenario's comment. It is never fixed by adding a retry
 (TEST_SUITE_SPEC.md section 10.3). `@quarantine` is deliberately not listed
 among the axes above — it is an exceptional, temporary marker, not a
 dimension every scenario is expected to carry one of.
+
+
+## Priority tags and Allure severity
+
+The suite's priority axis is `@critical` / `@high` / `@medium` / `@low`. Allure's
+severity vocabulary is `blocker` / `critical` / `normal` / `minor` / `trivial`.
+
+Only `critical` appears in both, so **`@critical` is the only priority that
+reaches the Allure report as a severity.** The Allure Cucumber adapter derives
+severity from tags while the scenario runs and finalises its labels after all
+hooks, so a label written from `@Before` or `@After` is discarded — this was
+tried and removed rather than left in place not working.
+
+Two consequences worth knowing:
+
+- The Allure report can be filtered by severity for critical scenarios, and not
+  for the other three.
+- **The by-priority breakdown in `target/scenario-coverage.md` does not depend on
+  Allure.** It reads the Cucumber tags directly and covers all four priorities,
+  including the critical pass rate that is the release gate. That report, not
+  Allure, is the source for the gate.
+
+If full severity mapping is wanted later, the supported route is a second tag per
+scenario in Allure's own vocabulary (`@severity=normal`), which doubles the tag
+noise on every scenario. That was judged not worth it while the release gate is
+already covered.

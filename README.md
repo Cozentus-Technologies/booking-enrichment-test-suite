@@ -177,3 +177,23 @@ be true before restoring the push and pull-request triggers:
 
 A badge that is red because nothing exists yet teaches nobody anything, so the
 workflow says so rather than failing on every commit.
+
+
+## Reports
+
+After a run:
+
+| Report | Path |
+|---|---|
+| Cucumber HTML | `target/cucumber-reports/index.html` |
+| Scenario coverage | `target/scenario-coverage.md` |
+| Allure | `allure generate target/allure-results --clean -o target/allure-report` |
+| JUnit XML | `target/cucumber-reports/cucumber.xml` |
+
+**Always run with `mvn clean`.** Allure results accumulate across runs rather than
+replacing each other, so without a clean the report shows failures from earlier
+runs alongside the current one. That is how a mutation experiment's deliberate
+failures ended up in an otherwise green report during development.
+
+**Critical pass rate is the release gate** and is reported separately in
+`scenario-coverage.md`; overall pass rate is informational.

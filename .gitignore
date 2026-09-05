@@ -18,3 +18,4 @@ allure-report/
 
 # Generated from testdata/city-cases.csv at build time; never committed.
 target/generated-features/
+allure-report/
