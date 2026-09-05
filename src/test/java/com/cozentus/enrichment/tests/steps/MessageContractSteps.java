@@ -60,18 +60,29 @@ public class MessageContractSteps {
         String staged = context.publishedOrder().get(0);
         String key = staged.substring(0, staged.indexOf('#'));
 
-        List<ConsumedMessage> observed = context.harness()
-                .drain(context.harness().enrichedTopic()).stream()
-                .filter(m -> m.key().equals(key))
-                .toList();
+        // drain() is a snapshot: asserting on it straight after publishing races
+        // the service. Wait for both outputs, bounded, before judging their order.
+        com.cozentus.enrichment.tests.support.PollUntil.isTrue(
+                () -> outputsFor(key).size() >= 2, context.config().awaitTimeout());
 
-        assertThat(observed).as("both outputs for key %s", key).hasSize(2);
+        List<ConsumedMessage> observed = outputsFor(key);
+
+        assertThat(observed)
+                .as("both outputs for key %s within %s.%nService log:%n%s",
+                        key, context.config().awaitTimeout(), context.service().readLog())
+                .hasSize(2);
         assertThat(observed.get(0).partition())
                 .as("a shared key must land on one partition, or order is undefined")
                 .isEqualTo(observed.get(1).partition());
         assertThat(observed.get(0).offset())
                 .as("first published must hold the lower offset")
                 .isLessThan(observed.get(1).offset());
+    }
+
+    private List<ConsumedMessage> outputsFor(String key) {
+        return context.harness().drain(context.harness().enrichedTopic()).stream()
+                .filter(message -> key.equals(message.key()))
+                .toList();
     }
 
     private ConsumedMessage observedMessage() {
