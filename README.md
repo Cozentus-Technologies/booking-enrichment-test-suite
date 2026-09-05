@@ -160,3 +160,20 @@ docs/                            strategy, tagging, maintenance, mutation check,
 src/test/java/.../tests/         RunCucumberTest, steps/, harness/, contract/, model/, data/, support/
 src/test/resources/              features/, testdata/, contracts/, config/, junit-platform.properties, allure.properties
 ```
+
+
+## CI status
+
+`.github/workflows/test-suite.yml` runs on demand only for now. Two things must
+be true before restoring the push and pull-request triggers:
+
+1. **The suite has tests.** `src/test/java` is empty by design; a push-triggered
+   run today can only fail.
+2. **A token exists that can read the service repository.** The service repo is
+   private, and a workflow's default `GITHUB_TOKEN` is scoped to its own
+   repository, so it cannot clone the service to build and start it. Add a
+   repository secret `SERVICE_TOKEN` — a PAT or deploy key with read access —
+   then uncomment the `push:` and `pull_request:` triggers.
+
+A badge that is red because nothing exists yet teaches nobody anything, so the
+workflow says so rather than failing on every commit.
