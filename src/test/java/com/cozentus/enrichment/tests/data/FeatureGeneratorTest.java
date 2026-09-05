@@ -44,17 +44,35 @@ class FeatureGeneratorTest {
     }
 
     @Test
-    @DisplayName("an enriched row asserts its expected city; a flagged row asserts a reason")
+    @DisplayName("an enriched row asserts its expected city; a flagged row asserts the exact reason")
     void assertionMatchesOutcome() {
         for (CityCase testCase : CASES) {
             if (testCase.isEnriched()) {
                 assertThat(FEATURE).as("%s", testCase.caseId())
                         .contains("And its origin is \"" + testCase.expected() + "\"");
+            } else {
+                assertThat(FEATURE).as("%s", testCase.caseId())
+                        .contains("And the reason is \"" + testCase.reason().trim() + "_ORIGIN_CITY\"");
             }
         }
-        long flaggedRows = CASES.stream().filter(c -> !c.isEnriched()).count();
-        assertThat(matches("^    And (the flag reason concerns the origin field)$"))
-                .hasSize((int) flaggedRows);
+    }
+
+    @Test
+    @DisplayName("the generated steps use the same wording as the hand-written features")
+    void vocabularyMatchesTheHandWrittenFeatures() {
+        // Divergent wording for identical intent doubles the number of step
+        // definitions someone has to write and keep working. These four
+        // phrasings are the ones shared with the hand-authored files.
+        assertThat(FEATURE)
+                .contains("When it is published to the raw topic")
+                .contains("Then it lands on the enriched topic")
+                .contains("Then it lands on the flagged topic")
+                .contains("And the reason is \"");
+
+        assertThat(FEATURE)
+                .doesNotContain("When the booking is published to the raw topic")
+                .doesNotContain("lands on the \"booking.")
+                .doesNotContain("the flag reason concerns");
     }
 
     @Test

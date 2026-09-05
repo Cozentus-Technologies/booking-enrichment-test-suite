@@ -75,18 +75,27 @@ public final class FeatureGenerator {
                 feature.append("    ").append(testCase.note()).append('\n');
             }
             feature.append(given(testCase));
-            feature.append("    When the booking is published to the raw topic\n");
+            feature.append("    When it is published to the raw topic\n");
 
             if (testCase.isEnriched()) {
-                feature.append("    Then the booking lands on the \"booking.enriched\" route\n");
+                feature.append("    Then it lands on the enriched topic\n");
                 feature.append("    And its origin is \"").append(testCase.expected()).append("\"\n");
             } else {
-                feature.append("    Then the booking lands on the \"booking.flagged\" route\n");
-                feature.append("    And the flag reason concerns the origin field\n");
+                feature.append("    Then it lands on the flagged topic\n");
+                feature.append("    And the reason is \"").append(originReason(testCase)).append("\"\n");
             }
             feature.append('\n');
         }
         return feature.toString();
+    }
+
+    /**
+     * The CSV abbreviates the reason because every row varies the origin; the
+     * scenario states the full constant the service actually emits, which is
+     * also the vocabulary the hand-written features use.
+     */
+    private static String originReason(CityCase testCase) {
+        return testCase.reason().trim() + "_ORIGIN_CITY";
     }
 
     /** The Given line, which differs for the two sentinel forms. */
