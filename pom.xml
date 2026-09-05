@@ -171,15 +171,52 @@
       </plugin>
 
       <plugin>
+        <!-- Generates features/functional/city_correction.feature from
+             city-cases.csv. Bound to process-test-classes rather than
+             generate-test-resources because the generator is itself test code
+             and must be compiled first; writing straight into test-classes puts
+             the result on the classpath where Cucumber scans for features.
+
+             The generated file is a build output. It is never committed, and
+             editing it is pointless because the next build overwrites it.
+             Change the CSV. -->
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions>
+          <execution>
+            <id>generate-city-correction-feature</id>
+            <phase>process-test-classes</phase>
+            <goals><goal>java</goal></goals>
+            <configuration>
+              <classpathScope>test</classpathScope>
+              <mainClass>com.cozentus.enrichment.tests.data.FeatureGenerator</mainClass>
+              <arguments>
+                <argument>${project.build.testOutputDirectory}/features/functional/city_correction.feature</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${maven-surefire-plugin.version}</version>
         <configuration>
-          <!-- Cucumber runs through the JUnit Platform engine; RunCucumberTest
-               is the single entry point surefire discovers. -->
+          <!-- Cucumber runs through the JUnit Platform engine via
+               RunCucumberTest, but the suite also has plain JUnit tests of its
+               own helpers - the CSV loader, the feature generator, the schema
+               validator. Those test the SUITE, not the service, so they are not
+               the white-box unit tests that TEST_SUITE_SPEC section 13 excludes.
+
+               Restricting includes to RunCucumberTest alone silently excluded
+               all of them and, while that class did not yet exist, made
+               `mvn test` report success having run nothing at all. -->
           <includes>
-            <include>**/RunCucumberTest.java</include>
+            <include>**/*Test.java</include>
           </includes>
+          <!-- A suite that runs no tests must not report success. -->
+          <failIfNoTests>true</failIfNoTests>
           <systemPropertyVariables>
             <suite.env>${suite.env}</suite.env>
             <bulk.count>${bulk.count}</bulk.count>
