@@ -82,3 +82,40 @@ Feature: Booking-level enrichment behaviour
     And the reason concerns the destination field
     And the reason is "AMBIGUOUS_DESTINATION_CITY"
     And the candidates are "New Delhi" and "Delhi", in reference order
+
+  @functional @city-correction @flagging @critical @slow @regression @TC-46
+  Scenario: Ambiguous origin is flagged with candidates in reference order
+    # The origin mirror of TC-29. Until this existed, AMBIGUOUS_ORIGIN_CITY was a
+    # reason the contract allowed and no scenario asserted, so a service that
+    # reported every ambiguity under the destination reason would have passed.
+    # Needs the extended reference list, hence @slow.
+    Given a booking with origin "Delh" and destination "Mumbai"
+    When it is published to the raw topic
+    Then it lands on the flagged topic
+    And the reason concerns the origin field
+    And the reason is "AMBIGUOUS_ORIGIN_CITY"
+    And the candidates are "New Delhi" and "Delhi", in reference order
+
+  @functional @city-correction @flagging @high @slow @regression @TC-47
+  Scenario: Both fields ambiguous produces both reasons, origin then destination
+    # Two reasons on one booking, and their order is part of the contract: a
+    # consumer reading reasons[0] to decide which field to route for review gets
+    # the wrong field if the order is not fixed.
+    Given a booking with origin "Delh" and destination "Delh"
+    When it is published to the raw topic
+    Then it lands on the flagged topic
+    And the reasons are "AMBIGUOUS_ORIGIN_CITY" and "AMBIGUOUS_DESTINATION_CITY", in that order
+
+  @functional @city-correction @critical @slow @regression @TC-48
+  Scenario: An exact match wins outright and is never reported ambiguous
+    # The contract ranks the exact rule above the fuzzy rule. With both "New Delhi"
+    # and "Delhi" in the reference list, the input "Delhi" equals one of them exactly
+    # and must enrich to it rather than being reported ambiguous with the other.
+    # The confidence assertion is what makes this a precedence test: enriching to
+    # "Delhi" with a confidence below 1.0 would mean the fuzzy rule happened to
+    # pick the right city, not that the exact rule took priority.
+    Given a booking with origin "Delhi" and destination "Mumbai"
+    When it is published to the raw topic
+    Then it lands on the enriched topic
+    And its origin is "Delhi"
+    And the origin confidence is exactly 1.0

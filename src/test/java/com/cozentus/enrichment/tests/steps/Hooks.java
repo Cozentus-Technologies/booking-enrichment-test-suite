@@ -30,8 +30,14 @@ public class Hooks {
      * in one place rather than scattered, and the scenario is tagged {@code @slow}
      * because of it.
      */
+    private static final String EXTENDED_CITIES =
+            "inline:Mumbai,New Delhi,Bangalore,Chennai,Kolkata,Pune,Hyderabad,Ahmedabad,Delhi";
+
     private static final Map<String, String> CITIES_BY_TAG = Map.of(
-            "@TC-29", "inline:Mumbai,New Delhi,Bangalore,Chennai,Kolkata,Pune,Hyderabad,Ahmedabad,Delhi");
+            "@TC-29", EXTENDED_CITIES,
+            "@TC-46", EXTENDED_CITIES,
+            "@TC-47", EXTENDED_CITIES,
+            "@TC-48", EXTENDED_CITIES);
 
     /**
      * F-21: entry criteria are verified once, before the first scenario runs.
