@@ -1,0 +1,6 @@
+{
+  "name": "mut-fabricated-id",
+  "extends": "baseline",
+  "describes": "A booking id is invented for a payload that never parsed, taken from the Kafka key. The reason is still MALFORMED_MESSAGE, so a scenario asserting only the reason cannot see it; the contract says the id must be null precisely because there was no parsed booking to read one from.",
+  "behaviour": { "fabricateMalformedBookingId": true }
+}

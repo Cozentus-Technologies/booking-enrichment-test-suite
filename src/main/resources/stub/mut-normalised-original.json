@@ -1,0 +1,6 @@
+{
+  "name": "mut-normalised-original",
+  "extends": "baseline",
+  "describes": "The 'original' field carries a cleaned-up copy of what arrived - trimmed, collapsed and case-folded - rather than the payload itself. That destroys the one record of what was actually sent, which is the whole reason the field exists: a reviewer correcting and replaying the booking would replay the service's guess, not the customer's message.",
+  "behaviour": { "normaliseOriginal": true }
+}

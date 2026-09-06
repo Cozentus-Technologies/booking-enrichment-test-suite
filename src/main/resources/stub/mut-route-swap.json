@@ -1,0 +1,6 @@
+{
+  "name": "mut-route-swap",
+  "extends": "baseline",
+  "describes": "The first booking bound for each output topic is sent to the other one. Every per-topic and per-total count still matches, so a volume check that compares sizes stays green and only one comparing identities can see it.",
+  "behaviour": { "swapOneRoutePair": true }
+}

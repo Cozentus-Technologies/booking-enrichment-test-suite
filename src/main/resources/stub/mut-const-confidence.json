@@ -1,0 +1,6 @@
+{
+  "name": "mut-const-confidence",
+  "extends": "baseline",
+  "describes": "Every correction is published with a confidence of 1.0, so a fuzzy match is indistinguishable from an exact one. The corrected city is still right in every case, so nothing but the confidence assertion can catch it - which is exactly the claim B-5 makes for those assertions.",
+  "behaviour": { "constantConfidence": 1.0 }
+}

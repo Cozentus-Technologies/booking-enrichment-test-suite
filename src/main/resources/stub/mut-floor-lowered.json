@@ -1,0 +1,8 @@
+{
+  "name": "mut-floor-lowered",
+  "extends": "baseline",
+  "describes": "The confidence floor is lowered far enough to accept an input the contract rejects. 'Oune' is one edit from 'pune', the same distance as 'Punr', so no distance rule can explain its rejection - only the floor can. This is the single mutation that the suite's flagged rows could not otherwise catch, because every other one of them is rejected by distance and would survive a floor change untouched.",
+  "mappings": [
+    { "whenCity": "Oune", "thenTopic": "enriched", "thenCity": "Pune", "thenConfidence": 0.79 }
+  ]
+}

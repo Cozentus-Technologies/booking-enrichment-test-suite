@@ -1,0 +1,9 @@
+{
+  "name": "mut-precedence",
+  "extends": "baseline",
+  "describes": "The fuzzy rule is allowed to outrank the exact rule, so an input that equals a reference entry outright is reported ambiguous against its neighbour instead of matching it. Scoped to the extended reference list, which is the only configuration where 'Delhi' and 'New Delhi' both exist and precedence is decidable at all.",
+  "mappings": [
+    { "whenCity": "Delhi", "whenCities": "extended", "thenTopic": "flagged", "thenReason": "AMBIGUOUS",
+      "thenCandidates": ["New Delhi", "Delhi"] }
+  ]
+}
