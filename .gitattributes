@@ -1,0 +1,15 @@
+# A-7. Without this, a Windows checkout rewrites run-tests.sh with CRLF and the
+# shebang line ends in \r, which bash reports as "bad interpreter". Feature files
+# and properties are pinned for the same reason: a stray \r inside a Gherkin step
+# becomes part of the step text and stops it matching its definition.
+* text=auto
+
+*.sh    text eol=lf
+*.feature text eol=lf
+*.properties text eol=lf
+*.yaml  text eol=lf
+*.csv   text eol=lf
+*.cmd   text eol=crlf
+
+*.jar   binary
+*.png   binary
