@@ -20,7 +20,6 @@ jobs:
     uses: ./.github/workflows/_run-suite.yml
     with:
       profile: nightly
-      suite_env: ci
       artifact_suffix: nightly
     secrets:
       SERVICE_SSH_KEY: ${{ secrets.SERVICE_SSH_KEY }}

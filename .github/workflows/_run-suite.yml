@@ -19,10 +19,6 @@ on:
         required: false
         default: ""
         type: string
-      suite_env:
-        required: false
-        default: ci
-        type: string
       artifact_suffix:
         description: "Keeps artifacts from different runs apart"
         required: false
@@ -80,9 +76,14 @@ jobs:
           mvn -q -DskipTests package
           ls -l target/city-enrichment.jar
 
+      # Always ci. That is the only layout a GitHub runner has: the workflow
+      # clones the service into service/, which is where test-ci.properties
+      # looks for the jar and the sample data. The local profile expects a
+      # sibling checkout that does not exist here, and external needs a real
+      # broker address and readiness URL, so neither belongs on a form.
       - name: Run the suite
         env:
-          SUITE_ENV: ${{ inputs.suite_env }}
+          SUITE_ENV: ci
         run: |
           if [ "${{ inputs.profile }}" = "tags" ]; then
             echo "Running tag expression: ${{ inputs.tags }}"
@@ -90,7 +91,7 @@ jobs:
             # that omits it silently falls back to the local profile and looks
             # for the broker at the wrong address.
             mvn -B test -Pkafka \
-              -Dsuite.env="${{ inputs.suite_env }}" \
+              -Dsuite.env=ci \
               -Dcucumber.filter.tags="${{ inputs.tags }}"
           else
             echo "Running profile: ${{ inputs.profile }}"

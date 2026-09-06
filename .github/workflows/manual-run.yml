@@ -33,12 +33,6 @@ on:
         required: false
         default: ""
         type: string
-      suite_env:
-        description: "Configuration profile"
-        required: false
-        default: ci
-        type: choice
-        options: [ci, local]
 
 jobs:
   requested:
@@ -46,7 +40,6 @@ jobs:
     with:
       profile: ${{ inputs.what }}
       tags: ${{ inputs.tags }}
-      suite_env: ${{ inputs.suite_env }}
       artifact_suffix: manual
     secrets:
       SERVICE_SSH_KEY: ${{ secrets.SERVICE_SSH_KEY }}
