@@ -120,6 +120,12 @@ public final class SpecInputs {
         return List.of();
     }
 
+    /** The planned set as rows, in catalogue order. */
+    public List<PlannedCase> plannedSet() {
+        return plannedCases().stream().map(PlannedCase::from)
+                .filter(c -> !c.id().isBlank()).toList();
+    }
+
     public Map<String, Object> report() {
         return map("report.yaml");
     }

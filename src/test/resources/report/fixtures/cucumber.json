@@ -1,0 +1,388 @@
+[
+  {
+    "line": 1,
+    "name": "Golden fixture feature",
+    "description": "",
+    "id": "golden-fixture-feature",
+    "keyword": "Feature",
+    "uri": "classpath:features/golden/fixture.feature",
+    "tags": [],
+    "elements": [
+      {
+        "start_timestamp": "2026-09-06T10:00:00.000Z",
+        "line": 9,
+        "name": "origin \"Mumbai\" is corrected to Mumbai",
+        "description": "",
+        "id": "f;p",
+        "type": "scenario",
+        "keyword": "Scenario",
+        "tags": [
+          {
+            "name": "@functional",
+            "line": 1
+          },
+          {
+            "name": "@critical",
+            "line": 1
+          },
+          {
+            "name": "@city-correction",
+            "line": 1
+          },
+          {
+            "name": "@fast",
+            "line": 1
+          },
+          {
+            "name": "@TC-01",
+            "line": 1
+          }
+        ],
+        "steps": [
+          {
+            "result": {
+              "duration": 1000000,
+              "status": "passed"
+            },
+            "line": 1,
+            "name": "a booking with origin \"Mumbai\"",
+            "keyword": "Given "
+          },
+          {
+            "result": {
+              "duration": 2000000,
+              "status": "passed"
+            },
+            "line": 1,
+            "name": "it is published to the raw topic",
+            "keyword": "When "
+          },
+          {
+            "result": {
+              "duration": 3000000,
+              "status": "passed"
+            },
+            "line": 1,
+            "name": "it lands on the enriched topic",
+            "keyword": "Then "
+          }
+        ],
+        "after": [
+          {
+            "embeddings": [
+              {
+                "data": "QktHLTAwMDEgLT4geyJvcmlnaW4iOiJNdW1iYWkifQ==",
+                "mime_type": "text/plain",
+                "name": "published"
+              },
+              {
+                "data": "eyJvcmlnaW4iOiJNdW1iYWkifQ==",
+                "mime_type": "application/json",
+                "name": "observed"
+              }
+            ],
+            "result": {
+              "duration": 1000000,
+              "status": "passed"
+            },
+            "match": {
+              "location": "Hooks.attachEvidenceAndTearDown()"
+            }
+          }
+        ]
+      },
+      {
+        "start_timestamp": "2026-09-06T10:00:05.000Z",
+        "line": 20,
+        "name": "origin \"Mumbi\" is corrected to Mumbai",
+        "description": "",
+        "id": "f;f",
+        "type": "scenario",
+        "keyword": "Scenario",
+        "tags": [
+          {
+            "name": "@functional",
+            "line": 1
+          },
+          {
+            "name": "@critical",
+            "line": 1
+          },
+          {
+            "name": "@city-correction",
+            "line": 1
+          },
+          {
+            "name": "@fast",
+            "line": 1
+          },
+          {
+            "name": "@TC-06",
+            "line": 1
+          }
+        ],
+        "steps": [
+          {
+            "result": {
+              "duration": 1000000,
+              "status": "passed"
+            },
+            "line": 1,
+            "name": "a booking with origin \"Mumbi\"",
+            "keyword": "Given "
+          },
+          {
+            "result": {
+              "duration": 2000000,
+              "status": "passed"
+            },
+            "line": 1,
+            "name": "it is published to the raw topic",
+            "keyword": "When "
+          },
+          {
+            "result": {
+              "duration": 4000000,
+              "status": "failed",
+              "error_message": "java.lang.AssertionError: expected origin to be \"Mumbai\" but was \"Mumbi\"\n\tat EnrichmentSteps.itsOriginIs(EnrichmentSteps.java:61)"
+            },
+            "line": 1,
+            "name": "its origin is \"Mumbai\"",
+            "keyword": "Then "
+          }
+        ],
+        "after": [
+          {
+            "embeddings": [
+              {
+                "data": "QktHLTAwMDIgLT4geyJib29raW5nSWQiOiJCS0ctMDAwMiIsIm9yaWdpbiI6Ik11bWJpIn0=",
+                "mime_type": "text/plain",
+                "name": "published"
+              },
+              {
+                "data": "eyJib29raW5nSWQiOiJCS0ctMDAwMiIsIm9yaWdpbiI6Ik11bWJpIiwiZW5yaWNobWVudCI6eyJvcmlnaW5Db25maWRlbmNlIjowLjQxfX0=",
+                "mime_type": "application/json",
+                "name": "observed"
+              },
+              {
+                "data": "dG9waWMgICAgIGJvb2tpbmcuZW5yaWNoZWQuZ29sZGVuCmtleSAgICAgICBCS0ctMDAwMgpwYXJ0aXRpb24gMQpvZmZzZXQgICAgNw==",
+                "mime_type": "text/plain",
+                "name": "envelope"
+              },
+              {
+                "data": "V0FSTiAgQ2l0eU1hdGNoZXIgLSBubyBjYW5kaWRhdGUgYWJvdmUgdGhlIGZsb29yIGZvciAiTXVtYmki",
+                "mime_type": "text/plain",
+                "name": "service log"
+              }
+            ],
+            "result": {
+              "duration": 1000000,
+              "status": "passed"
+            },
+            "match": {
+              "location": "Hooks.attachEvidenceAndTearDown()"
+            }
+          }
+        ]
+      },
+      {
+        "start_timestamp": "2026-09-06T10:00:11.000Z",
+        "line": 30,
+        "name": "A booking is routed by outcome",
+        "description": "",
+        "id": "f;o;1",
+        "type": "scenario",
+        "keyword": "Scenario Outline",
+        "tags": [
+          {
+            "name": "@functional",
+            "line": 1
+          },
+          {
+            "name": "@high",
+            "line": 1
+          },
+          {
+            "name": "@routing",
+            "line": 1
+          },
+          {
+            "name": "@fast",
+            "line": 1
+          },
+          {
+            "name": "@TC-34",
+            "line": 1
+          }
+        ],
+        "steps": [
+          {
+            "result": {
+              "duration": 1000000,
+              "status": "passed"
+            },
+            "line": 1,
+            "name": "a booking with outcome row 1",
+            "keyword": "Given "
+          },
+          {
+            "result": {
+              "duration": 2000000,
+              "status": "passed"
+            },
+            "line": 1,
+            "name": "it is published to the raw topic",
+            "keyword": "When "
+          },
+          {
+            "result": {
+              "duration": 3000000,
+              "status": "passed"
+            },
+            "line": 1,
+            "name": "it lands on the expected topic",
+            "keyword": "Then "
+          }
+        ]
+      },
+      {
+        "start_timestamp": "2026-09-06T10:00:12.000Z",
+        "line": 31,
+        "name": "A booking is routed by outcome",
+        "description": "",
+        "id": "f;o;2",
+        "type": "scenario",
+        "keyword": "Scenario Outline",
+        "tags": [
+          {
+            "name": "@functional",
+            "line": 1
+          },
+          {
+            "name": "@high",
+            "line": 1
+          },
+          {
+            "name": "@routing",
+            "line": 1
+          },
+          {
+            "name": "@fast",
+            "line": 1
+          },
+          {
+            "name": "@TC-34",
+            "line": 1
+          }
+        ],
+        "steps": [
+          {
+            "result": {
+              "duration": 1000000,
+              "status": "passed"
+            },
+            "line": 1,
+            "name": "a booking with outcome row 2",
+            "keyword": "Given "
+          },
+          {
+            "result": {
+              "duration": 2000000,
+              "status": "passed"
+            },
+            "line": 1,
+            "name": "it is published to the raw topic",
+            "keyword": "When "
+          },
+          {
+            "result": {
+              "duration": 3000000,
+              "status": "passed"
+            },
+            "line": 1,
+            "name": "it lands on the expected topic",
+            "keyword": "Then "
+          }
+        ]
+      },
+      {
+        "start_timestamp": "2026-09-06T10:00:20.000Z",
+        "line": 40,
+        "name": "A malformed payload is flagged as MALFORMED_MESSAGE",
+        "description": "",
+        "id": "f;b",
+        "type": "scenario",
+        "keyword": "Scenario",
+        "tags": [
+          {
+            "name": "@resilience",
+            "line": 1
+          },
+          {
+            "name": "@critical",
+            "line": 1
+          },
+          {
+            "name": "@routing",
+            "line": 1
+          },
+          {
+            "name": "@fast",
+            "line": 1
+          },
+          {
+            "name": "@TC-50",
+            "line": 1
+          }
+        ],
+        "steps": [
+          {
+            "result": {
+              "duration": 0,
+              "status": "skipped"
+            },
+            "line": 1,
+            "name": "a malformed payload",
+            "keyword": "Given "
+          },
+          {
+            "result": {
+              "duration": 0,
+              "status": "skipped"
+            },
+            "line": 1,
+            "name": "it is published to the raw topic",
+            "keyword": "When "
+          },
+          {
+            "result": {
+              "duration": 0,
+              "status": "skipped"
+            },
+            "line": 1,
+            "name": "it lands on the flagged topic",
+            "keyword": "Then "
+          }
+        ],
+        "after": [
+          {
+            "embeddings": [
+              {
+                "data": "RW50cnkgY3JpdGVyaWEgbm90IG1ldDogdGhlIGJyb2tlciByZWZ1c2VkIHRoZSB0b3BpYyBjcmVhdGlvbiByZXF1ZXN0Lg==",
+                "mime_type": "text/plain",
+                "name": "blocked"
+              }
+            ],
+            "result": {
+              "duration": 1000000,
+              "status": "passed"
+            },
+            "match": {
+              "location": "Hooks.attachEvidenceAndTearDown()"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

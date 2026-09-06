@@ -29,7 +29,10 @@ public record RunResult(String caseId,
             return switch (this) {
                 case PASS -> "pass";
                 case FAIL -> "fail";
-                case SKIP -> "skip";
+                // The template filters on "skipped" in thirteen places. While
+                // this said "skip", nothing ever matched and the report could
+                // not show a planned case that did not run.
+                case SKIP -> "skipped";
                 case BLOCKED -> "blocked";
             };
         }
@@ -41,6 +44,12 @@ public record RunResult(String caseId,
 
     public boolean passed() {
         return status == Status.PASS;
+    }
+
+    /** The same case with its module restated in the catalogue's vocabulary. */
+    public RunResult inModule(String canonicalModule) {
+        return new RunResult(caseId, title, canonicalModule, type, priority, profile,
+                status, durationSeconds, failingStep, failureMessage, attachments);
     }
 
     /** Tags carry the axes; a missing one is reported rather than guessed. */
