@@ -1,11 +1,13 @@
 package com.cozentus.enrichment.tests.support;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.concurrent.Callable;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.cozentus.enrichment.tests.data.TestDataLoader;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -146,5 +148,56 @@ class EntryCriteriaTest {
         assertThat(lines).hasSize(2);
         assertThat(lines.get(0)).contains("A").contains("fine").contains("PASS");
         assertThat(lines.get(1)).contains("B").contains("broken: timed out").contains("FAIL");
+    }
+
+    // ---- the shared, cached gate -------------------------------------------
+
+    @org.junit.jupiter.api.BeforeEach
+    void forgetPreviousVerification() {
+        EntryCriteria.resetVerification();
+    }
+
+    @Test
+    @DisplayName("the environment is probed once, however many callers ask")
+    void theCheckRunsOnce() {
+        java.util.concurrent.atomic.AtomicInteger probes =
+                new java.util.concurrent.atomic.AtomicInteger();
+        java.util.function.Supplier<EntryCriteria.Report> passing = () -> {
+            probes.incrementAndGet();
+            return new EntryCriteria.Report(List.of(
+                    new EntryCriteria.CheckResult("Broker reachable", true, "ok")));
+        };
+
+        EntryCriteria.verifyOnce(passing);
+        EntryCriteria.verifyOnce(passing);
+        EntryCriteria.verifyOnce(passing);
+
+        assertThat(probes.get())
+                .as("every caller re-probing a broker is what made a dead-broker run take 88 seconds")
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("a failure is cached and rethrown without probing again")
+    void aFailureIsRethrownImmediately() {
+        java.util.concurrent.atomic.AtomicInteger probes =
+                new java.util.concurrent.atomic.AtomicInteger();
+        java.util.function.Supplier<EntryCriteria.Report> failing = () -> {
+            probes.incrementAndGet();
+            return new EntryCriteria.Report(List.of(
+                    new EntryCriteria.CheckResult("Broker reachable", false, "Could not list topics")));
+        };
+
+        assertThatThrownBy(() -> EntryCriteria.verifyOnce(failing))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("cannot be trusted")
+                .hasMessageContaining("Could not list topics");
+
+        // The second caller must fail on the cached answer, not by asking again.
+        assertThatThrownBy(() -> EntryCriteria.verifyOnce(failing))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Could not list topics");
+
+        assertThat(probes.get()).as("the broker must be probed once, not once per caller").isEqualTo(1);
     }
 }

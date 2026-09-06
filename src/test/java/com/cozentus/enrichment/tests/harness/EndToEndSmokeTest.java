@@ -43,6 +43,9 @@ class EndToEndSmokeTest {
 
     private void startWith(String citiesSource) {
         config = TestConfig.load();
+        // Without this, a stopped broker is rediscovered here once per test,
+        // each time at the cost of an admin-client timeout.
+        com.cozentus.enrichment.tests.support.EntryCriteria.verifyOnce(config);
         String scenarioId = TopicProvisioner.newScenarioId();
         harness = new KafkaServiceHarness(config, scenarioId);
         service = ServiceController.start(config, scenarioId,

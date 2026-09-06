@@ -83,8 +83,6 @@ public class Hooks {
      * A misconfigured environment otherwise surfaces as sixty-odd confusing
      * scenario failures instead of one clear statement of what is not ready.
      */
-    private static volatile boolean entryCriteriaChecked = false;
-    private static volatile String entryCriteriaFailure = null;
 
     private final ScenarioContext context;
 
@@ -213,23 +211,12 @@ public class Hooks {
      * dead broker, and every one after it went on to create topics against a
      * broker that was not there.
      */
-    private static synchronized void verifyEntryCriteriaOnce(TestConfig config) {
-        if (entryCriteriaFailure != null) {
-            throw new IllegalStateException(entryCriteriaFailure);
-        }
-        if (entryCriteriaChecked) {
-            return;
-        }
-
-        EntryCriteria.Report report = EntryCriteria.run(config);
-        report.lines().forEach(line -> System.out.println("  " + line));
-
-        if (!report.allPassed()) {
-            entryCriteriaFailure = "Entry criteria not met, so the run cannot be trusted:\n"
-                    + String.join("\n", report.lines());
-            throw new IllegalStateException(entryCriteriaFailure);
-        }
-        entryCriteriaChecked = true;
+    private static void verifyEntryCriteriaOnce(TestConfig config) {
+        // The cache moved to EntryCriteria so the Kafka-backed JUnit classes
+        // share it. Keeping a second copy here would put the suite back where it
+        // was: one group of tests failing fast and another rediscovering a dead
+        // broker one admin-client timeout at a time.
+        EntryCriteria.verifyOnce(config);
     }
 
     private static String citiesSourceFor(Scenario scenario) {

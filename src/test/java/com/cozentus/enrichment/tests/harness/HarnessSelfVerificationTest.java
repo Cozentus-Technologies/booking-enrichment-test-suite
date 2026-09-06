@@ -44,6 +44,8 @@ class HarnessSelfVerificationTest {
         config = TestConfig.load();
         Assumptions.assumeFalse(config.isExternal(),
                 "publishes directly onto the output topics; only safe where the suite owns them");
+        // Same gate the scenarios use: one verdict on the environment per JVM.
+        com.cozentus.enrichment.tests.support.EntryCriteria.verifyOnce(config);
         harness = new KafkaServiceHarness(config, TopicProvisioner.newScenarioId());
         window = Duration.ofSeconds(3);
     }

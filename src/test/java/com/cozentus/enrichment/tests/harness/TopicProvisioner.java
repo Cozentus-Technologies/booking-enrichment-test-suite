@@ -25,7 +25,17 @@ public final class TopicProvisioner implements AutoCloseable {
     private static final int PARTITIONS = 3;
     private static final short REPLICATION = 1;
     /** Short on purpose: this client only probes, so a hang is worse than a retry. */
-    private static final Duration ADMIN_TIMEOUT = Duration.ofSeconds(5);
+    /**
+     * How long to wait on the admin client before calling the broker unreachable.
+     *
+     * <p>Three seconds, not the client default of sixty. This is the deadline a
+     * dead broker is discovered on, and it is paid by every check that probes
+     * one, so it sets the floor on how quickly a run can abort and say so. A
+     * broker that is up answers a metadata request in single-digit
+     * milliseconds; one that needs three seconds is not one the suite should be
+     * trusting a timing-sensitive assertion against.
+     */
+    private static final Duration ADMIN_TIMEOUT = Duration.ofSeconds(3);
 
     private final Admin admin;
 

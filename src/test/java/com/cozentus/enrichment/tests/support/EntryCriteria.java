@@ -62,6 +62,50 @@ public final class EntryCriteria {
     }
 
     /** Runs all entry criteria against the given configuration. */
+    /**
+     * Whether the environment has already been judged, and what it said.
+     *
+     * <p>The caching lived in {@code Hooks}, so it covered the Cucumber
+     * scenarios and nothing else. The Kafka-backed JUnit classes each went
+     * straight to creating topics against a broker that was not there, and paid
+     * an admin-client timeout every time: a run with the broker stopped took
+     * eighty-eight seconds to abort, of which roughly seventy-three were those
+     * classes discovering the same fact twenty-one times.
+     *
+     * <p>The gate belongs here, where every caller can share one answer.
+     */
+    private static boolean verified = false;
+    private static String verificationFailure = null;
+
+    /** Probes the environment once per JVM and rethrows the same verdict after. */
+    public static void verifyOnce(TestConfig config) {
+        verifyOnce(() -> run(config));
+    }
+
+    static synchronized void verifyOnce(java.util.function.Supplier<Report> check) {
+        if (verificationFailure != null) {
+            throw new IllegalStateException(verificationFailure);
+        }
+        if (verified) {
+            return;
+        }
+        Report report = check.get();
+        report.lines().forEach(line -> System.out.println("  " + line));
+
+        if (!report.allPassed()) {
+            verificationFailure = "Entry criteria not met, so the run cannot be trusted:\n"
+                    + String.join("\n", report.lines());
+            throw new IllegalStateException(verificationFailure);
+        }
+        verified = true;
+    }
+
+    /** Test seam: the cache is per-JVM, and each test needs its own starting point. */
+    static synchronized void resetVerification() {
+        verified = false;
+        verificationFailure = null;
+    }
+
     public static Report run(TestConfig config) {
         return new Report(List.of(
                 dataTableParses(),

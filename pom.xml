@@ -377,6 +377,19 @@
                 <fileset>
                   <directory>target/surefire-reports</directory>
                 </fileset>
+                <fileset>
+                  <!-- The Cucumber report has to describe THIS invocation too.
+                       A run that aborts in setup leaves a report whose every step
+                       is skipped - correct, nothing ran - and ExecutionGuard then
+                       read it on the NEXT invocation, counted zero executed and
+                       failed the build. That made `mvn package -DskipTests` exit 1
+                       after any aborted run, which in turn stopped
+                       run-mutation-check.sh building its stub: the suite's own
+                       proof that it can fail was unreachable until someone ran
+                       mvn clean. Same staleness the surefire fileset above fixes,
+                       one directory further along. -->
+                  <directory>target/cucumber-reports</directory>
+                </fileset>
               </filesets>
             </configuration>
           </execution>
