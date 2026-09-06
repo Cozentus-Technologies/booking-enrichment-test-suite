@@ -56,3 +56,18 @@ Feature: Schema conformance of the output messages
     # level in its absence.
     Given the current "booking-enriched-v1" schema and its previous committed version
     Then the schema change between them is additive only
+
+  @contract @schema @high @fast @TC-57
+  Scenario: An added field is accepted as a backward-compatible change
+    # TC-45 compares booking-enriched-v1 with itself, because previousVersionOf(1)
+    # returns 1, so it cannot fail however the checker behaves. These two scenarios
+    # compare the current schema against committed predecessors that differ from it
+    # in a known way, and pin both verdicts: a checker that always passed and one
+    # that always failed are both caught.
+    Given the "booking-enriched-v1" schema and the committed "booking-enriched-previous-compatible" fixture as its previous version
+    Then the schema change against that fixture is additive only
+
+  @contract @schema @critical @fast @TC-58
+  Scenario: Removing a required field is rejected as a breaking change
+    Given the "booking-enriched-v1" schema and the committed "booking-enriched-previous-breaking" fixture as its previous version
+    Then the schema change against that fixture is rejected as breaking

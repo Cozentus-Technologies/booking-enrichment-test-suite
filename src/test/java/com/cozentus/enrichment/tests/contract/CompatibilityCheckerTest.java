@@ -1,5 +1,6 @@
 package com.cozentus.enrichment.tests.contract;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -311,5 +312,37 @@ class CompatibilityCheckerTest {
         assertThat(result.getBreakingChanges())
                 .extracting(CompatibilityChecker.BreakingChange::fieldPath)
                 .contains("/enrichment/originConfidence");
+    }
+
+    @Test
+    @DisplayName("B-10: widening integer to number is compatible, because integer is a subset of number")
+    void integerWidenedToNumberIsCompatible() {
+        // JSON Schema defines integer as a subset of number, so every payload
+        // that validated as an integer still validates as a number. A naive set
+        // difference over the type names calls this a removal and would block a
+        // legitimate schema relaxation.
+        String previous = """
+                {"type":"object","properties":{"score":{"type":"integer"}}}""";
+        String current = """
+                {"type":"object","properties":{"score":{"type":"number"}}}""";
+
+        assertThat(new CompatibilityChecker().compare(previous, current).isCompatible())
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("B-10: narrowing number to integer is still breaking")
+    void numberNarrowedToIntegerIsBreaking() {
+        String previous = """
+                {"type":"object","properties":{"score":{"type":"number"}}}""";
+        String current = """
+                {"type":"object","properties":{"score":{"type":"integer"}}}""";
+
+        CompatibilityChecker.CompatibilityResult result =
+                new CompatibilityChecker().compare(previous, current);
+
+        assertThat(result.isCompatible()).isFalse();
+        assertThat(result.getBreakingChanges())
+                .anyMatch(c -> c.type() == CompatibilityChecker.BreakingChangeType.TYPE_NARROWED);
     }
 }

@@ -143,6 +143,14 @@ public final class CompatibilityChecker {
         Set<String> newTypes = toTypeSet(newSchema.get("type"));
         Set<String> removedTypes = new LinkedHashSet<>(oldTypes);
         removedTypes.removeAll(newTypes);
+        // JSON Schema defines integer as a subset of number, so a field that
+        // widens from integer to number still accepts every payload that
+        // validated before. A plain set difference over the type names reads
+        // that widening as a removal and would block a legitimate relaxation;
+        // the reverse, number narrowed to integer, remains breaking.
+        if (removedTypes.contains("integer") && newTypes.contains("number")) {
+            removedTypes.remove("integer");
+        }
         if (!removedTypes.isEmpty()) {
             breakingChanges.add(new BreakingChange(BreakingChangeType.TYPE_NARROWED, path.isEmpty() ? "/" : path,
                     "Allowed type(s) " + removedTypes + " were removed (was " + oldTypes + ", now " + newTypes

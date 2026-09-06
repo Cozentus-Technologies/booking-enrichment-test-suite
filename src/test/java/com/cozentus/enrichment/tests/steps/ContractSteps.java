@@ -89,6 +89,61 @@ public class ContractSteps {
         return Math.max(1, version - 1);
     }
 
+    // --- B-10: a comparison that can actually fail --------------------------
+
+    private JsonNode fixtureUnderComparison;
+    private CompatibilityChecker.CompatibilityResult fixtureResult;
+
+    /**
+     * B-10. The self-comparison above cannot fail, so it says nothing about
+     * whether the checker works. These two steps compare the current schema
+     * against committed predecessors that differ from it in a known way: one
+     * additively, one by removing a required field. Together they pin both
+     * verdicts, so a checker that always passed - or always failed - is caught.
+     */
+    @io.cucumber.java.en.Given("the {string} schema and the committed {string} fixture as its previous version")
+    public void schemaAndFixture(String schema, String fixture) {
+        var repository = new com.cozentus.enrichment.tests.contract.SchemaRepository();
+        JsonNode current = repository.getSchemaNode(nameOf(schema), versionOf(schema));
+        fixtureUnderComparison = readFixture(fixture);
+        fixtureResult = checker.compare(fixtureUnderComparison, current);
+    }
+
+    @Then("the schema change against that fixture is additive only")
+    public void changeAgainstFixtureIsAdditive() {
+        assertThat(fixtureResult.isCompatible())
+                .as("an added field is backward compatible, but the checker reported:%n%s",
+                        fixtureResult.describe())
+                .isTrue();
+    }
+
+    @Then("the schema change against that fixture is rejected as breaking")
+    public void changeAgainstFixtureIsBreaking() {
+        assertThat(fixtureResult.isCompatible())
+                .as("removing a required field breaks every consumer that reads it, "
+                        + "but the checker accepted the change")
+                .isFalse();
+        assertThat(fixtureResult.getBreakingChanges())
+                .as("the breaking change must be reported as a removal, naming the field")
+                .anySatisfy(change -> {
+                    assertThat(change.type())
+                            .isEqualTo(CompatibilityChecker.BreakingChangeType.FIELD_REMOVED);
+                    assertThat(change.fieldPath()).contains("settlementCurrency");
+                });
+    }
+
+    private static JsonNode readFixture(String fixture) {
+        String resource = "/contracts/fixtures/" + fixture + ".schema.json";
+        try (java.io.InputStream in = ContractSteps.class.getResourceAsStream(resource)) {
+            if (in == null) {
+                throw new IllegalStateException("Missing compatibility fixture: " + resource);
+            }
+            return new com.fasterxml.jackson.databind.ObjectMapper().readTree(in);
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException("Could not read " + resource, e);
+        }
+    }
+
     /**
      * Scenarios name a schema as it is published, version included, e.g.
      * "booking-enriched-v1". The repository takes name and version separately,
