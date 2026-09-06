@@ -99,6 +99,28 @@ class TagDisciplineTest {
                 .asString().contains("@TC-nn");
     }
 
+    /**
+     * E-2. The environment axis arrived after the other four, and the way that
+     * goes wrong is that the new tag lands inside one of the exclusive axes and
+     * every scenario carrying it becomes a build failure.
+     */
+    @Test
+    @DisplayName("an environment tag is an extra axis, not an extra type or priority")
+    void anEnvironmentTagDoesNotBreakAFullyTaggedScenario() {
+        assertThat(TagDiscipline.checkLines("f.feature",
+                feature("@functional @critical @routing @slow @requires-service-config @TC-01")))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("an environment tag the suite does not act on is caught")
+    void anInventedEnvironmentTagIsCaught() {
+        assertThat(TagDiscipline.checkLines("f.feature",
+                feature("@functional @critical @routing @requires-extended-cities @TC-01")))
+                .singleElement().extracting(TagDiscipline.Violation::problem)
+                .asString().contains("@requires-extended-cities", "never excluded");
+    }
+
     @Test
     @DisplayName("every committed scenario, generated one included, is fully tagged")
     void theRealSuiteIsClean() {

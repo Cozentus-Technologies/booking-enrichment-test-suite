@@ -46,6 +46,25 @@ public final class TagDiscipline {
     private static final Set<String> AREAS = Set.of(
             "@city-correction", "@routing", "@flagging", "@passthrough",
             "@message-contract", "@schema", "@encoding", "@dates");
+
+    /**
+     * E-2. Environment axis: what a scenario needs of the environment it is
+     * pointed at, as distinct from what kind of test it is or when it runs.
+     *
+     * <p>Its own axis rather than another selection tag, because a selection tag
+     * says when someone chooses to run a scenario and this says where it is
+     * capable of running at all. Optional.
+     *
+     * <p>Enumerated, and enforced as enumerated, because {@code Hooks} acts on
+     * these exact strings. A scenario tagged {@code @requires-extended-cities}
+     * reads to a person as excluded from a shared deployment and is not: it runs
+     * there and fails, every run, and the tag is the reason nobody looks.
+     */
+    private static final Set<String> ENVIRONMENTS = Set.of("@requires-service-config");
+
+    /** Anything shaped like an environment requirement has to be one of the above. */
+    private static final String ENVIRONMENT_PREFIX = "@requires-";
+
     private static final Pattern TRACEABILITY = Pattern.compile("@TC-\\d+");
 
     /** One scenario that broke a rule, named so the fix is obvious. */
@@ -132,6 +151,10 @@ public final class TagDiscipline {
         long priorities = unique.stream().filter(PRIORITIES::contains).count();
         long areas = unique.stream().filter(AREAS::contains).count();
         long traceability = unique.stream().filter(tag -> TRACEABILITY.matcher(tag).matches()).count();
+        List<String> unknownEnvironment = unique.stream()
+                .filter(tag -> tag.startsWith(ENVIRONMENT_PREFIX))
+                .filter(tag -> !ENVIRONMENTS.contains(tag))
+                .toList();
 
         if (types != 1) {
             violations.add(new Violation(file, scenario,
@@ -144,6 +167,12 @@ public final class TagDiscipline {
         if (areas < 1) {
             violations.add(new Violation(file, scenario,
                     "needs at least one feature-area tag from " + AREAS));
+        }
+        if (!unknownEnvironment.isEmpty()) {
+            violations.add(new Violation(file, scenario,
+                    "carries unrecognised environment tag(s) " + unknownEnvironment
+                            + "; the suite acts only on " + ENVIRONMENTS
+                            + ", so a scenario tagged anything else is never excluded"));
         }
         if (traceability != 1) {
             violations.add(new Violation(file, scenario,
