@@ -51,11 +51,20 @@ reconciliation in section 8.3.
 @TC-nn
 ```
 
-`@TC-DRIVEN` is the sole exception: it marks the single Scenario Outline in
-`city_correction.feature` whose Examples table is populated from
-`testdata/city-cases.csv`, so the individual `TC-01`..`TC-20` traceability
-lives in the CSV's own `caseId` column rather than in twenty separate
-`@TC-nn` tags on one outline.
+There is no exception. An earlier draft of this guideline described a
+`@TC-DRIVEN` tag marking a single Scenario Outline in `city_correction.feature`
+whose Examples table was populated from the CSV. That is not what was built,
+and the tag appears in no feature file: `TagDiscipline` requires exactly one
+`@TC-nn` per scenario and would reject a scenario carrying `@TC-DRIVEN`
+instead.
+
+The reason the design changed is worth recording, because it is the same
+reason the rule has no exception. Gherkin cannot tag an individual Examples
+row, so a single Outline over the whole table would have given fifty cases one
+shared tag - and with it no way to filter, trace or report on any one of them.
+`FeatureGenerator` therefore emits one `Scenario` per CSV row, each carrying
+that row's own tags. Every scenario in the suite, generated or hand-written,
+follows the same rule.
 
 ## 2. Worked example
 

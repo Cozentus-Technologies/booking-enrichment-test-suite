@@ -34,7 +34,7 @@ Rules that keep the table below true:
 |---|---|
 | New city variant to test | One CSV row in `testdata/city-cases.csv` |
 | New reference city | One CSV row |
-| Threshold retuned | Boundary rows in `testdata/city-cases.csv`; no scenario changes |
+| Threshold retuned | The most expensive change in this table, not the cheapest. Boundary rows in `testdata/city-cases.csv` (their outcomes **and** their measured notes, which must be re-measured with `BoundaryProbe`); the hand-written scenarios that assert a fuzzy correction in `booking_enrichment.feature` and `schema_contract.feature`; `EndToEndSmokeTest`; and the service repository's oracle `data/bookings-sample.jsonl.expected.json`, which must be regenerated. The suite states the threshold's value nowhere - `ThresholdGuard` enforces that - so nothing needs editing to *hold* the new number; what changes is which inputs land on which topic. |
 | Topic renamed | `config/test-*.properties` only |
 | New payload field | `model/` plus one passthrough scenario |
 | New behaviour | A feature file; steps usually already exist |

@@ -32,7 +32,7 @@ therefore trace to **two** places at once:
 2. SPEC.md section 5's matching contract and its sanity table, which is what
    every row's expected outcome is ultimately checked against.
 
-Regenerate with `mvn generate-test-resources`; do not hand-edit the
+Regenerate with `mvn process-test-classes`; do not hand-edit the
 generated file (a build step overwrites it). A new case is added as a CSV
 row, never as a change to this matrix or to `FeatureGenerator` itself.
 
@@ -116,8 +116,8 @@ payload shapes as JSON Schema.
 |---|---|---|---|---|
 | TC-40 | Every enriched message validates against `booking-enriched-v1` | critical | contract | §4 enriched booking shape |
 | TC-41 | Every flagged message validates against `booking-flagged-v1` | critical | contract | §4 flagged booking shape |
-| TC-42 | A flagged message fails validation against the enriched schema | high | contract | §2 exclusivity, enforced structurally via the schema's `status` enum; mutation table row 3 |
-| TC-43 | An extra unrecognised field does not break schema conformance | medium | contract | §4 (schema tolerates additional properties) |
+| TC-42 | A flagged message fails validation against the enriched schema | high | contract | §2 exclusivity, enforced structurally. There is no `status` enum: CH-09 asked for one and it was deliberately rejected, because SPEC section 4 defines no such field and inventing it would have changed a payload shape the spec forbids changing. Exclusivity comes from `additionalProperties: false` plus disjoint `required` sets, so a flagged payload genuinely fails this schema and an enriched payload genuinely fails the flagged one. See DEF-111. |
+| TC-43 | An extra unrecognised field does not break schema conformance | medium | contract | §4. Note the mechanism: the schema sets `additionalProperties: false`, so it does **not** tolerate the extra field. The scenario passes because the service drops unrecognised fields before publishing, and what is asserted is that tolerance on the way in does not become a violation on the way out. |
 | TC-44 | Enrichment metadata carries original and corrected values per city | high | contract | §4 enriched booking shape (`enrichment` block); mutation table row 7 |
 | TC-45 | A schema change against the previous version is additive only | medium | contract | Not a SPEC.md clause — exercises `CompatibilityChecker` against the schema file's own git history (TEST_SUITE_SPEC.md §7.5) |
 

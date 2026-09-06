@@ -113,10 +113,22 @@
 - Feature files readable by a business analyst — scenarios become a shared artefact, not a QA-only one
 - Living documentation published from the feature files, so spec, tests and documentation stay in sync by construction
 
-### 5.2 Plain JUnit for non-functional
+### 5.2 Gherkin for the non-functional tiers too
 
-- Volume and resilience tests are written in JUnit, not Gherkin
-- Wrapping a 1,000-message throughput run in business language adds ceremony without adding clarity
+- Volume and resilience are Gherkin, in `features/nonfunctional/volume.feature` and
+  `resilience.feature`, not JUnit. An earlier draft of this document argued the
+  opposite and the suite was built the other way; this section records what was
+  actually built and why.
+- The argument for JUnit was that wrapping a 1,000-message run in business
+  language adds ceremony. What decided it against was tagging: the report,
+  the traceability matrix and every `-Dcucumber.filter.tags` profile are driven
+  from scenario tags, and a JUnit test carries none of them. Splitting the
+  suite across two runners would have meant two coverage stories and two ways
+  to select a slice.
+- Plain JUnit is still used, but for the suite's own helpers - the CSV loader,
+  the feature generator, the schema validator, the guards. Those test the
+  suite, not the service, so they are not the white-box unit tests section 4.3
+  excludes.
 
 ### 5.3 Spec-driven generation
 
@@ -148,17 +160,36 @@
 
 Every scenario carries one tag from each axis.
 
-**By test type**
+These axes are enforced by `TagDiscipline`, which fails the build on a scenario
+that does not satisfy them. The lists below are the ones it holds; if the two
+ever disagree, `TagDiscipline` is the authority and this document is stale.
+
+**By test type** - exactly one
 
 ```
-@functional  @resilience  @volume  @smoke  @regression
+@functional  @contract  @resilience  @volume
 ```
 
-**By feature area**
+`@smoke` and `@regression` are *not* test types. They were listed here as such,
+which made the one-type-tag rule treat them as alternatives to `@functional` -
+so no scenario could be both, and `run-tests.sh smoke` selected nothing while
+reporting success. They are a separate selection axis, below.
+
+**By selection** - how a run is sliced, orthogonal to what a scenario tests
 
 ```
-@city-correction  @routing  @flagging  @passthrough  @serialisation
+@fast  @slow  @nightly  @smoke  @regression  @quarantine
 ```
+
+**By feature area** - at least one
+
+```
+@city-correction  @routing  @flagging  @passthrough
+@message-contract  @schema  @encoding  @dates
+```
+
+`@serialisation` was listed here and exists nowhere in the suite; the areas it
+was meant to cover are `@schema` and `@encoding`.
 
 **By priority**
 
@@ -338,3 +369,51 @@ Observations relevant to a production deployment of this pattern:
 - **Confidence threshold ownership** — a business decision, not a technical one. Requires a named owner, a tuning process, and an agreed cost model for a wrong auto-correction versus a false flag
 - **Operational path for flagged bookings** — who reviews them, against what SLA, and whether corrections feed back into master data
 - **Multilingual and transliterated city names** — a real logistics feed will carry diacritics, non-Latin script and transliteration variants
+
+---
+
+## 16. Known Limitations
+
+A reader cannot otherwise tell a deliberate boundary from unfinished work. This
+section separates the two.
+
+### 16.1 Out of scope by decision
+
+Each of these is excluded because it needs infrastructure this exercise does not
+have, not because it was overlooked. Section 4.3 gives the full table; the
+headline exclusions are:
+
+| Excluded | What it would need |
+|---|---|
+| Performance and throughput | A dedicated environment; k6 or the JMeter Kafka plugin. The volume tier asserts correctness at scale and no throughput figure anywhere |
+| Broker and downstream failure injection | Toxiproxy with Testcontainers |
+| Schema evolution across versions | A schema registry with compatibility modes. What exists here is a suite-level stand-in: two committed fixtures and a checker, which is not the same thing |
+| Contract testing against TMS | A published TMS contract, which was never supplied. Pact or a shared schema |
+| Code coverage | Nothing: it is not measurable from a black-box suite and belongs to the development team's own unit tests. What this suite reports is scenario coverage against `spec/test-cases.yaml` |
+| Security, TLS, broker authentication | An environment concern, not a suite-level one |
+
+### 16.2 Accepted rather than fixed
+
+These are known and open. They are recorded here rather than closed quietly.
+
+- **DEF-111 - routing exclusivity has one mechanism, not two.** `TEST_SUITE_SPEC`
+  section 7.5 claims TC-32 (behavioural) and TC-42 (structural) protect topic
+  exclusivity independently. They do not. TC-42 validates a flagged payload in
+  isolation, where routing cannot affect it, and TC-40 only ever publishes a
+  booking that enriches successfully, so no leaked payload reaches it. The
+  structural backstop is real but it is not a second independent check of
+  routing. This is why the release recommendation is *proceed with conditions*
+  rather than *proceed*.
+- **The confidence floor has no named owner.** The strategy says the threshold is
+  a business decision requiring an owner and a tuning process. Neither exists.
+  The suite is built so this costs nothing to change - it states the value
+  nowhere, and `ThresholdGuard` fails the build if anyone encodes it - but the
+  decision itself is still unowned.
+- **`TC-43` passes for a reason its name does not describe.** The enriched schema
+  sets `additionalProperties: false`, so it does not tolerate an extra field.
+  The scenario passes because the service drops unrecognised fields before
+  publishing. The assertion is correct and worth keeping; the case title reads
+  as though the schema were permissive, and it is not.
+- **Reference list size.** Every matching case is proven against eight cities.
+  Nothing here says how the strategy behaves against a real gazetteer, and
+  section 15 explains why that is a different problem rather than a bigger one.
