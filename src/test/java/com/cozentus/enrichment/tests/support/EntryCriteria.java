@@ -123,7 +123,7 @@ public final class EntryCriteria {
         // ephemeral port, so nothing is listening at the configured URL before
         // the run and a failure here would be an artefact of the check rather
         // than a fact about the environment.
-        if (!"external".equalsIgnoreCase(config.environment())) {
+        if (!config.isExternal()) {
             return new CheckResult("Readiness endpoint responds", true,
                     "not applicable under the " + config.environment()
                             + " profile: the suite starts a service per scenario");

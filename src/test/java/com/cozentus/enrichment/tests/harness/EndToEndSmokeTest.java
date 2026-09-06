@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.cozentus.enrichment.tests.support.TestConfig;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -24,6 +26,20 @@ class EndToEndSmokeTest {
     private TestConfig config;
     private KafkaServiceHarness harness;
     private ServiceController service;
+
+    /**
+     * E-1. These start a service instance of their own and, for the ambiguity
+     * case, one configured against a different reference list. Against a
+     * deployment the suite did not start neither is possible: there is no jar to
+     * launch and no way to reconfigure someone else's process. Skipped rather
+     * than failed, for the same reason the four @requires-service-config
+     * scenarios are - the deployment is not what would be wrong.
+     */
+    @BeforeEach
+    void onlyWhereTheSuiteStartsTheService() {
+        Assumptions.assumeFalse(TestConfig.load().isExternal(),
+                "needs the suite to start the service; not available under suite.env=external");
+    }
 
     private void startWith(String citiesSource) {
         config = TestConfig.load();

@@ -4,6 +4,7 @@ import com.cozentus.enrichment.tests.model.ConsumedMessage;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,8 +13,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
@@ -31,6 +34,20 @@ public final class MessageCollector implements AutoCloseable {
 
     private static final Duration POLL = Duration.ofMillis(100);
 
+    /**
+     * E-1. Where to begin reading when partitions are assigned.
+     *
+     * <p>{@code EARLIEST} is right for a topic the suite created for one
+     * scenario: the whole of it is this scenario's. It is wrong for a
+     * deployment's long-lived topic, where the whole of it is months of other
+     * people's traffic - the collector would spend the run draining history and
+     * the first thing a scenario correlated on could be a message from a run
+     * that finished last week.
+     */
+    public enum StartPosition {
+        EARLIEST, END
+    }
+
     private final String topic;
     private final KafkaConsumer<String, String> consumer;
     private final List<ConsumedMessage> received = new CopyOnWriteArrayList<>();
@@ -38,11 +55,39 @@ public final class MessageCollector implements AutoCloseable {
     private final CountDownLatch assigned = new CountDownLatch(1);
     private final Thread poller;
 
-    public MessageCollector(String bootstrapServers, String consumerGroup, String topic) {
+    public MessageCollector(String bootstrapServers, String consumerGroup, String topic,
+                            StartPosition start) {
         this.topic = topic;
         this.consumer = new KafkaConsumer<>(properties(bootstrapServers, consumerGroup));
-        this.consumer.subscribe(List.of(topic));
+        this.consumer.subscribe(List.of(topic), rebalanceListener(start));
         this.poller = Thread.ofVirtual().name("collector-" + topic).start(this::run);
+    }
+
+    /**
+     * Seeking has to happen on assignment rather than once after construction:
+     * the partitions are not known until the group has rebalanced, and a
+     * rebalance can happen again later in the scenario.
+     */
+    private ConsumerRebalanceListener rebalanceListener(StartPosition start) {
+        return new ConsumerRebalanceListener() {
+            @Override
+            public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
+                // Nothing is committed, so nothing has to be flushed on the way out.
+            }
+
+            @Override
+            public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+                if (start != StartPosition.END) {
+                    return;
+                }
+                consumer.seekToEnd(partitions);
+                // seekToEnd only records an intent; the end offset is resolved on
+                // the next fetch. Asking for the position forces that resolution
+                // here, inside the listener, so the poll that follows cannot
+                // return a batch of history first.
+                partitions.forEach(consumer::position);
+            }
+        };
     }
 
     private static Properties properties(String bootstrapServers, String consumerGroup) {
@@ -51,7 +96,8 @@ public final class MessageCollector implements AutoCloseable {
         properties.put(ConsumerConfig.GROUP_ID_CONFIG, consumerGroup);
         properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        // The topic is created fresh per scenario, so earliest is the whole of it.
+        // Where a fresh group starts when no seek overrides it. On a topic the
+        // suite created per scenario, earliest is the whole of it.
         properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         return properties;
@@ -91,13 +137,17 @@ public final class MessageCollector implements AutoCloseable {
         }
     }
 
-    /** Everything seen so far. Correlate by key; arrival order across partitions is not meaningful. */
+    /**
+     * Everything seen so far. Correlate by key; arrival order across partitions
+     * is not meaningful.
+     *
+     * <p>Deliberately the only way out. There was a {@code receivedFor(key)}
+     * here that correlated straight off the wire, which on a shared topic would
+     * have matched another run's message with the same booking id. Correlation
+     * belongs to {@link KafkaServiceHarness}, which knows the run's namespace.
+     */
     public List<ConsumedMessage> received() {
         return List.copyOf(received);
-    }
-
-    public List<ConsumedMessage> receivedFor(String key) {
-        return received.stream().filter(m -> key.equals(m.key())).toList();
     }
 
     public String topic() {

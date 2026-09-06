@@ -50,6 +50,22 @@ public final class TestConfig {
         return environment;
     }
 
+    /**
+     * E-1. The one question the rest of the suite asks about the environment.
+     *
+     * <p>Everything that differs against a deployment this suite did not
+     * provision - starting no process, reading no jar path, creating and
+     * deleting no topics, correlating on a run-scoped booking id, consuming from
+     * the end of a topic that has history - branches on this rather than on the
+     * profile name, so the decision is stated once and cannot drift between the
+     * places that depend on it. It used to be asked in exactly one line of
+     * {@link EntryCriteria} while every other such decision was taken
+     * unconditionally, which is why the external profile existed in name only.
+     */
+    public boolean isExternal() {
+        return "external".equalsIgnoreCase(environment);
+    }
+
     public String bootstrapServers() {
         return required("kafka.bootstrap.servers");
     }

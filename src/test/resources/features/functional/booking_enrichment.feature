@@ -73,7 +73,7 @@ Feature: Booking-level enrichment behaviour
     And a confidence score is present for the origin correction
     And a confidence score is present for the destination correction
 
-  @functional @city-correction @flagging @high @slow @TC-29
+  @functional @city-correction @flagging @high @slow @requires-service-config @TC-29
   Scenario: Ambiguous input is flagged with candidates listed in reference order
     # This scenario needs a service instance started against an extended reference
     # list that includes both "New Delhi" and "Delhi", so "Delh" resolves to two
@@ -87,7 +87,7 @@ Feature: Booking-level enrichment behaviour
     And the reason is "AMBIGUOUS_DESTINATION_CITY"
     And the candidates are "New Delhi" and "Delhi", in reference order
 
-  @functional @city-correction @flagging @critical @slow @regression @TC-46
+  @functional @city-correction @flagging @critical @slow @regression @requires-service-config @TC-46
   Scenario: Ambiguous origin is flagged with candidates in reference order
     # The origin mirror of TC-29. Until this existed, AMBIGUOUS_ORIGIN_CITY was a
     # reason the contract allowed and no scenario asserted, so a service that
@@ -102,7 +102,7 @@ Feature: Booking-level enrichment behaviour
     And the flagged original is carried as a booking object
     And the flagged original equals the payload published
 
-  @functional @city-correction @flagging @high @slow @regression @TC-47
+  @functional @city-correction @flagging @high @slow @regression @requires-service-config @TC-47
   Scenario: Both fields ambiguous produces both reasons, origin then destination
     # Two reasons on one booking, and their order is part of the contract: a
     # consumer reading reasons[0] to decide which field to route for review gets
@@ -112,7 +112,7 @@ Feature: Booking-level enrichment behaviour
     Then it lands on the flagged topic
     And the reasons are "AMBIGUOUS_ORIGIN_CITY" and "AMBIGUOUS_DESTINATION_CITY", in that order
 
-  @functional @city-correction @critical @slow @regression @TC-48
+  @functional @city-correction @critical @slow @regression @requires-service-config @TC-48
   Scenario: An exact match wins outright and is never reported ambiguous
     # The contract ranks the exact rule above the fuzzy rule. With both "New Delhi"
     # and "Delhi" in the reference list, the input "Delhi" equals one of them exactly
