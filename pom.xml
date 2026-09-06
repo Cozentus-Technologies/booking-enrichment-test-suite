@@ -218,6 +218,30 @@
             </configuration>
           </execution>
           <execution>
+            <!-- B-4: a flag reason the contract allows and no scenario asserts is a
+                 hole the suite cannot see, because a missing scenario does not fail,
+                 it is simply absent. Bound before the tests so the gap is reported
+                 without waiting for a full run. -->
+            <id>guard-flag-reason-coverage</id>
+            <phase>process-test-classes</phase>
+            <goals><goal>java</goal></goals>
+            <configuration>
+              <classpathScope>test</classpathScope>
+              <mainClass>com.cozentus.enrichment.tests.support.ReasonCoverage</mainClass>
+            </configuration>
+          </execution>
+          <execution>
+            <!-- B-5: the suite must not restate the service's confidence floor, or
+                 the two agree by construction instead of by test. -->
+            <id>guard-against-encoded-thresholds</id>
+            <phase>process-test-classes</phase>
+            <goals><goal>java</goal></goals>
+            <configuration>
+              <classpathScope>test</classpathScope>
+              <mainClass>com.cozentus.enrichment.tests.support.ThresholdGuard</mainClass>
+            </configuration>
+          </execution>
+          <execution>
             <!-- A-1: a run that reports success having executed no scenarios is a
                  failure. Bound after the tests so it sees the finished report. -->
             <id>guard-against-empty-runs</id>

@@ -90,8 +90,8 @@ class TestDataLoaderTest {
     @DisplayName("a row with the wrong column count is rejected by row, not silently skipped")
     void malformedRowIsRejected() {
         String csv = """
-                caseId,field,input,expected,outcome,reason,tags,note
-                TC-01,origin,Mumbai,Mumbai,ENRICHED,,@functional @critical @city-correction @TC-01,note
+                caseId,field,input,expected,outcome,reason,confidence,tags,note
+                TC-01,origin,Mumbai,Mumbai,ENRICHED,,exact,@functional @critical @city-correction @TC-01,note
                 TC-02,origin,Mumbai,Mumbai,ENRICHED
                 """;
 
@@ -104,8 +104,8 @@ class TestDataLoaderTest {
     @DisplayName("a row with no tags is rejected, since an untagged case cannot be traced")
     void untaggedRowIsRejected() {
         String csv = """
-                caseId,field,input,expected,outcome,reason,tags,note
-                TC-01,origin,Mumbai,Mumbai,ENRICHED,,,note
+                caseId,field,input,expected,outcome,reason,confidence,tags,note
+                TC-01,origin,Mumbai,Mumbai,ENRICHED,,exact,,note
                 """;
 
         assertThatThrownBy(() -> TestDataLoader.parse(new BufferedReader(new StringReader(csv))))
@@ -123,8 +123,8 @@ class TestDataLoaderTest {
     @DisplayName("B-1: a row that does not say which field it varies is rejected")
     void fieldlessRowIsRejected() {
         String csv = """
-                caseId,field,input,expected,outcome,reason,tags,note
-                TC-01,,Mumbai,Mumbai,ENRICHED,,@functional @critical @fast @TC-01,note
+                caseId,field,input,expected,outcome,reason,confidence,tags,note
+                TC-01,,Mumbai,Mumbai,ENRICHED,,exact,@functional @critical @fast @TC-01,note
                 """;
 
         assertThatThrownBy(() -> TestDataLoader.parse(new BufferedReader(new StringReader(csv))))

@@ -31,6 +31,40 @@ public class EnrichmentSteps {
                 .as("corrected destination").isEqualTo(expected);
     }
 
+    /**
+     * B-5. Exactly 1.0 means the value resolved without fuzzy matching. The
+     * suite never asserts against the confidence floor: copying that constant
+     * in would make the suite and the service agree by construction, and would
+     * turn a deliberate retune of the threshold into a suite failure.
+     */
+    @Then("the origin confidence is exactly 1.0")
+    public void originConfidenceIsExactlyOne() {
+        assertThat(context.enriched().originConfidence())
+                .as("origin took the exact path, so no correction was applied")
+                .isEqualTo(1.0d);
+    }
+
+    @Then("the destination confidence is exactly 1.0")
+    public void destinationConfidenceIsExactlyOne() {
+        assertThat(context.enriched().destinationConfidence())
+                .as("destination took the exact path, so no correction was applied")
+                .isEqualTo(1.0d);
+    }
+
+    @Then("the origin confidence is below 1.0")
+    public void originConfidenceIsBelowOne() {
+        assertThat(context.enriched().originConfidence())
+                .as("origin was corrected, so it cannot have matched exactly")
+                .isLessThan(1.0d);
+    }
+
+    @Then("the destination confidence is below 1.0")
+    public void destinationConfidenceIsBelowOne() {
+        assertThat(context.enriched().destinationConfidence())
+                .as("destination was corrected, so it cannot have matched exactly")
+                .isLessThan(1.0d);
+    }
+
     @Then("the enrichment metadata records the original origin {string} and the original destination {string}")
     public void metadataRecordsOriginals(String origin, String destination) {
         EnrichedView view = context.enriched();

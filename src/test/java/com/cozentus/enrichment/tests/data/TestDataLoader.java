@@ -1,6 +1,7 @@
 package com.cozentus.enrichment.tests.data;
 
 import com.cozentus.enrichment.tests.model.CityField;
+import com.cozentus.enrichment.tests.model.ConfidencePath;
 import com.cozentus.enrichment.tests.model.Outcome;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -80,12 +81,18 @@ public final class TestDataLoader {
         if (field.isBlank()) {
             throw new IllegalStateException(caseId + " does not say which field it varies");
         }
+        ConfidencePath confidence = ConfidencePath.parse(column(header, values, "confidence"));
+        if (Outcome.valueOf(outcome.trim()) == Outcome.ENRICHED && confidence == ConfidencePath.NONE) {
+            throw new IllegalStateException(caseId
+                    + " enriches but does not say whether the value matched exactly or was corrected");
+        }
         return new CityCase(caseId,
                 CityField.valueOf(field.trim().toUpperCase(java.util.Locale.ROOT)),
                 column(header, values, "input"),
                 column(header, values, "expected"),
                 Outcome.valueOf(outcome.trim()),
                 column(header, values, "reason"),
+                confidence,
                 tags,
                 column(header, values, "note"));
     }

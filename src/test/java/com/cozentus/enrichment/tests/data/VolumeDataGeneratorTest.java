@@ -152,6 +152,7 @@ class VolumeDataGeneratorTest {
     }
 
     private static CityCase caseRow(String caseId, String input, Outcome outcome) {
-        return new CityCase(caseId, CityField.ORIGIN, input, "", outcome, "", List.of("@fast"), "");
+        return new CityCase(caseId, CityField.ORIGIN, input, "", outcome, "",
+                com.cozentus.enrichment.tests.model.ConfidencePath.NONE, List.of("@fast"), "");
     }
 }

@@ -52,6 +52,29 @@ public record EnrichedView(ConsumedMessage message, JsonNode payload) {
         return payload.path("enrichment").path("destinationConfidence").isNumber();
     }
 
+    /**
+     * B-5. The value itself, not merely whether one is present.
+     *
+     * @throws AssertionError if the field is absent, so a missing confidence is
+     *         reported as a missing confidence rather than as a wrong number
+     */
+    public double originConfidence() {
+        return confidence("originConfidence");
+    }
+
+    public double destinationConfidence() {
+        return confidence("destinationConfidence");
+    }
+
+    private double confidence(String field) {
+        JsonNode value = payload.path("enrichment").path(field);
+        if (!value.isNumber()) {
+            throw new AssertionError("The enriched message carries no numeric " + field
+                    + ". enrichment block was: " + payload.path("enrichment"));
+        }
+        return value.asDouble();
+    }
+
     public String raw() {
         return message.payload();
     }

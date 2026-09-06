@@ -1,6 +1,7 @@
 package com.cozentus.enrichment.tests.data;
 
 import com.cozentus.enrichment.tests.model.CityField;
+import com.cozentus.enrichment.tests.model.ConfidencePath;
 import com.cozentus.enrichment.tests.model.Outcome;
 import java.util.List;
 
@@ -17,6 +18,7 @@ public record CityCase(String caseId,
                        String expected,
                        Outcome outcome,
                        String reason,
+                       ConfidencePath confidence,
                        List<String> tags,
                        String note) {
 

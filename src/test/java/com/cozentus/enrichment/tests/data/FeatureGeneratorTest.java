@@ -3,6 +3,7 @@ package com.cozentus.enrichment.tests.data;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.cozentus.enrichment.tests.model.CityField;
+import com.cozentus.enrichment.tests.model.ConfidencePath;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -152,6 +153,34 @@ class FeatureGeneratorTest {
             assertThat(FeatureGenerator.given(testCase))
                     .as("%s must vary only %s", testCase.caseId(), testCase.field().lowerName())
                     .contains(otherField + " \"Mumbai\"");
+        }
+    }
+
+    @Test
+    @DisplayName("B-5: an exact-path row asserts confidence 1.0, a fuzzy-path row asserts below it")
+    void confidencePathIsAsserted() {
+        for (CityCase testCase : CASES) {
+            if (testCase.confidence() == ConfidencePath.NONE) {
+                continue;
+            }
+            String expected = "    And the %s confidence is %s%n"
+                    .formatted(testCase.field().lowerName(),
+                            testCase.confidence() == ConfidencePath.EXACT
+                                    ? "exactly 1.0" : "below 1.0");
+
+            assertThat(FEATURE).as("%s", testCase.caseId()).contains(expected);
+        }
+    }
+
+
+    @Test
+    @DisplayName("B-5: every enriched row states which path its value took")
+    void everyEnrichedRowDeclaresItsPath() {
+        for (CityCase testCase : CASES) {
+            if (testCase.isEnriched()) {
+                assertThat(testCase.confidence()).as("%s", testCase.caseId())
+                        .isNotEqualTo(ConfidencePath.NONE);
+            }
         }
     }
 }

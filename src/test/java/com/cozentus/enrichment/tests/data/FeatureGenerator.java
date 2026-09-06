@@ -84,6 +84,10 @@ public final class FeatureGenerator {
                 feature.append("    Then it lands on the enriched topic\n");
                 feature.append("    And its ").append(testCase.field().lowerName())
                         .append(" is \"").append(testCase.expected()).append("\"\n");
+                // B-5: the city alone cannot distinguish an exact match from a
+                // correction that happens to land on the same city.
+                feature.append("    And the ").append(testCase.field().lowerName())
+                        .append(" confidence is ").append(testCase.confidence().phrase()).append('\n');
             } else {
                 feature.append("    Then it lands on the flagged topic\n");
                 feature.append("    And the reason is \"").append(reason(testCase)).append("\"\n");
