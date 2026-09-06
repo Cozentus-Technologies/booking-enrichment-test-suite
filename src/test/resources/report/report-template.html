@@ -485,13 +485,16 @@ function verdict(){
   const v={go:'Proceed',hold:'Proceed with conditions',stop:'Hold release'}[st]||'Not determined';
   const failed=R.exitCriteria.filter(x=>!x.ok), blk=failed.filter(x=>x.blocking);
   const openBlocking=R.defects.filter(d=>d.status==='Open'&&d.impact==='Blocking');
+  const openConditional=R.defects.filter(d=>d.status==='Open'&&d.impact==='Conditional');
   const n=blk.length
     ? `${blk.length} of ${R.exitCriteria.length} exit criteria are blocking and unmet: ${blk.map(x=>x.c).join('; ')}.`
     : openBlocking.length
       ? `${openBlocking.length} open defect(s) classified blocking: ${openBlocking.map(d=>d.id).join(', ')}.`
       : failed.length
         ? `${failed.length} of ${R.exitCriteria.length} exit criteria unmet. Release may proceed only with product owner sign-off and a named owner and fix date for each open defect.`
-        : 'All exit criteria met. No open defect affects a critical path.';
+        : openConditional.length
+          ? `All exit criteria met. ${openConditional.map(d=>d.id).join(', ')} classified conditional: release proceeds only with product owner sign-off and a named owner and fix date for each.`
+          : 'All exit criteria met. No open defect affects a critical path.';
   $('#rec').dataset.v=st; $('#recV').textContent=v; $('#recN').textContent=n;
 
   const ex=C.filter(EX), ps=cnt(C,'pass'), fl=cnt(C,'fail'), bl=cnt(C,'blocked');
