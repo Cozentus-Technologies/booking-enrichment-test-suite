@@ -111,7 +111,8 @@ class DocumentationTest {
 
         for (String artefact : DocumentedCommands.artefactPathsIn(DOCS)) {
             String basename = artefact.substring(artefact.lastIndexOf('/') + 1);
-            boolean producedByBuild = build.contains(artefact) || build.contains(basename);
+            boolean producedByBuild = build.contains(artefact) || build.contains(basename)
+                    || writtenByCodeThatRuns(basename, build);
             // Some artefacts are produced by a manual step rather than the build -
             // the Allure HTML report needs the Allure CLI. That is fine as long as
             // the docs show the command, which is what "-o <path>" here means.
@@ -130,6 +131,48 @@ class DocumentationTest {
                             + "collected by the workflow for months while CoverageReporter was "
                             + "bound to no phase at all.", artefact)
                     .isTrue();
+        }
+    }
+
+    /**
+     * True when some class writes this file AND that class actually runs.
+     *
+     * <p>Both halves are needed. "A class writes it" alone is not production:
+     * {@code CoverageReporter} writes target/scenario-coverage.md and produced
+     * nothing for months because it was bound to no phase. "The build names it"
+     * alone misses the opposite case: target/environment-exclusions.txt is
+     * written by {@code Hooks} during the run and appears in no build file.
+     *
+     * <p>A class runs if it participates in the test run - a Cucumber hook, a
+     * step definition, a JUnit test - or if the build invokes it by name.
+     * Matched on the basename because a path is often assembled from segments,
+     * as {@code Path.of("target", "...")} is, so the joined string appears
+     * nowhere in the source.
+     */
+    private static boolean writtenByCodeThatRuns(String basename, String build) {
+        try (java.util.stream.Stream<Path> files = Files.walk(Path.of("src/test/java"))) {
+            for (Path file : files.filter(f -> f.toString().endsWith(".java")).toList()) {
+                // A test that names an artefact in order to assert on it is not
+                // what produces it. Counting CoverageReporterTest as a producer
+                // made this check pass with CoverageReporter bound to nothing,
+                // which is the exact bug it exists to catch.
+                if (file.getFileName().toString().endsWith("Test.java")) {
+                    continue;
+                }
+                String source = read(file);
+                if (!source.contains(basename)) {
+                    continue;
+                }
+                boolean runsWithTheSuite = source.contains("@Before") || source.contains("@After")
+                        || source.contains("@Test");
+                String className = file.getFileName().toString().replace(".java", "");
+                if (runsWithTheSuite || build.contains(className)) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException("Could not scan src/test/java", e);
         }
     }
 
