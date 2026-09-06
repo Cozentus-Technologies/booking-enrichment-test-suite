@@ -133,8 +133,8 @@ public final class ReportGenerator {
                 Map.of("t", "title", "d", "detail")));
         root.set("assumptions", rows(spec.section("scope.yaml", "assumptions"),
                 Map.of("t", "title", "d", "detail")));
-        root.set("blocked", blocked(results, planned, plannedCount));
-        root.set("cases", cases(results));
+        root.set("blocked", blocked(results, planned));
+        root.set("cases", cases(results, planned, defects));
         root.set("metrics", metricsNode(metrics));
         return root;
     }
@@ -146,7 +146,10 @@ public final class ReportGenerator {
         double seconds = results.stream().mapToDouble(RunResult::durationSeconds).sum();
 
         ObjectNode report = MAPPER.createObjectNode();
-        String prefix = text(configured, "id_prefix", "TESR-BE");
+        // D-9: these four were read under names spec/report.yaml does not use,
+        // so the file's own values were silently ignored and the defaults
+        // below stood in for them.
+        String prefix = text(configured, "report_id_prefix", "TESR-BE");
         report.put("id", "%s-%s-%s".formatted(prefix, LocalDate.now(), env("BUILD_NUMBER", "local")));
         report.put("version", text(configured, "version", "1.0"));
         report.put("project", text(configured, "project", "Booking Enrichment"));
