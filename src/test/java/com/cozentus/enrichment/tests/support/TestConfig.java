@@ -95,6 +95,32 @@ public final class TestConfig {
         return seconds("volume.timeout.seconds");
     }
 
+    /**
+     * A-4. Resolves a configured path and, when it is absent, fails with enough
+     * detail to fix it: the property, the value configured, the absolute path
+     * that value resolved to, and the flag that overrides it.
+     *
+     * <p>The defaults name a sibling directory, which is only correct when both
+     * repositories are checked out side by side under those exact names. A
+     * message saying "build it with mvn package" does not help someone whose
+     * checkout is called something else.
+     */
+    public java.nio.file.Path resolvePath(String key, String whatItIs) {
+        String configured = required(key);
+        java.nio.file.Path path = java.nio.file.Path.of(configured);
+
+        if (!java.nio.file.Files.exists(path)) {
+            throw new IllegalStateException("""
+                    %s not found.
+                      property        %s
+                      configured      %s
+                      resolved to     %s
+                      override with   -D%s=<path>"""
+                    .formatted(whatItIs, key, configured, path.toAbsolutePath(), key));
+        }
+        return path;
+    }
+
     /** System property wins, so a single run can be redirected without editing a file. */
     public String required(String key) {
         String value = System.getProperty(key, properties.getProperty(key));

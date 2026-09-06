@@ -59,11 +59,8 @@ public class VolumeSteps {
      */
     @Given("the bulk sample data set and its labelled oracle")
     public void theBulkSampleAndItsOracle() {
-        Path data = Path.of(context.config().required("sample.data.path"));
-        Path oraclePath = Path.of(context.config().required("sample.oracle.path"));
-
-        assertThat(data).as("committed sample; build the service repo first").exists();
-        assertThat(oraclePath).as("committed oracle").exists();
+        Path data = context.config().resolvePath("sample.data.path", "Bulk sample data set");
+        Path oraclePath = context.config().resolvePath("sample.oracle.path", "Bulk sample oracle");
 
         try {
             sampleRows = Files.readAllLines(data, StandardCharsets.UTF_8).stream()

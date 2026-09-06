@@ -58,13 +58,7 @@ public final class ServiceController implements AutoCloseable {
 
     private void launch(String scenarioId, String rawTopic, String enrichedTopic,
                         String flaggedTopic, String citiesSource) {
-        Path jar = Path.of(config.required("service.jar.path"));
-        if (!Files.exists(jar)) {
-            throw new IllegalStateException(
-                    "Service jar not found at " + jar + ". Build it with "
-                            + "`mvn package -DskipTests` in the service repository, "
-                            + "or set service.jar.path.");
-        }
+        Path jar = config.resolvePath("service.jar.path", "Service jar");
 
         List<String> command = new ArrayList<>(List.of(
                 javaBinary(), "-jar", jar.toString(),
@@ -108,8 +102,13 @@ public final class ServiceController implements AutoCloseable {
                 .GET().build();
 
         return PollUntil.isTrue(() -> {
+            // A-5: a process that has already exited will never become ready, so
+            // waiting out the remaining timeout only delays the diagnosis. Fail
+            // immediately with its own log, which says why it died.
             if (process != null && !process.isAlive()) {
-                return false;
+                throw new IllegalStateException(
+                        "The service exited before reporting ready (exit code "
+                                + process.exitValue() + ").\nService log:\n" + readLog());
             }
             try {
                 return http.send(request, HttpResponse.BodyHandlers.ofString()).statusCode() == 200;
