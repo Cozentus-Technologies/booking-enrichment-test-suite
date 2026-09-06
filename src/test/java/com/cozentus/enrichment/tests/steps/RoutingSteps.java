@@ -75,6 +75,11 @@ public class RoutingSteps {
 
     private void assertAbsent(String topic, String label) {
         String bookingId = context.currentBookingId();
+        // Recorded so the report can state how long absence was observed for;
+        // the claim is a bounded observation, not a proof, and the window is
+        // the whole of its strength.
+        context.absenceWindowUsed("%s watched on %s for %s"
+                .formatted(bookingId, label, context.config().absenceWindow()));
 
         assertThat(context.harness().nothingArrivedFor(bookingId, topic,
                 context.config().absenceWindow()))

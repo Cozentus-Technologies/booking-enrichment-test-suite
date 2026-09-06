@@ -43,12 +43,22 @@ public class Hooks {
         TestConfig config = TestConfig.load();
         String scenarioId = TopicProvisioner.newScenarioId();
 
-        KafkaServiceHarness harness = new KafkaServiceHarness(config, scenarioId);
-        ServiceController service = ServiceController.start(config, scenarioId,
-                harness.rawTopic(), harness.enrichedTopic(), harness.flaggedTopic(),
-                citiesSourceFor(scenario));
-
-        context.bind(config, harness, service, scenarioId);
+        try {
+            KafkaServiceHarness harness = new KafkaServiceHarness(config, scenarioId);
+            ServiceController service = ServiceController.start(config, scenarioId,
+                    harness.rawTopic(), harness.enrichedTopic(), harness.flaggedTopic(),
+                    citiesSourceFor(scenario));
+            context.bind(config, harness, service, scenarioId);
+        } catch (RuntimeException prerequisiteFailed) {
+            // Spec 8.11: cucumber.json has no notion of blocked. Recording the
+            // cause keeps "we could not run it" distinct from "we chose not to"
+            // and from "it does not work" - three different facts a project
+            // manager has to be able to tell apart.
+            context.blocked(prerequisiteFailed.getMessage() == null
+                    ? prerequisiteFailed.toString()
+                    : prerequisiteFailed.getMessage());
+            throw prerequisiteFailed;
+        }
     }
 
     private static String citiesSourceFor(Scenario scenario) {
@@ -74,6 +84,27 @@ public class Hooks {
             String observed = context.observedPayload();
             if (observed != null) {
                 scenario.attach(observed.getBytes(StandardCharsets.UTF_8), "application/json", "observed");
+            }
+
+            // Spec 8.4: the envelope as well as the body. Key, partition and
+            // offset are what a defect report needs in order to locate the
+            // message on the broker without reproducing the run.
+            var message = context.observedMessage();
+            if (message != null) {
+                String envelope = "topic     " + message.topic()
+                        + "\nkey       " + message.key()
+                        + "\npartition " + message.partition()
+                        + "\noffset    " + message.offset()
+                        + "\nheaders   " + message.headers();
+                scenario.attach(envelope.getBytes(StandardCharsets.UTF_8), "text/plain", "envelope");
+            }
+            if (context.absenceWindowUsed() != null) {
+                scenario.attach(context.absenceWindowUsed().getBytes(StandardCharsets.UTF_8),
+                        "text/plain", "absence window");
+            }
+            if (context.isBlocked()) {
+                scenario.attach(context.blockedCause().getBytes(StandardCharsets.UTF_8),
+                        "text/plain", "blocked");
             }
             if (scenario.isFailed()) {
                 scenario.attach(context.service().readLog().getBytes(StandardCharsets.UTF_8),

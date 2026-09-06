@@ -31,6 +31,12 @@ public class ScenarioContext {
     private EnrichedView enriched;
     private FlaggedView flagged;
 
+    /** Spec 8.11: set when a prerequisite failed, so the scenario could not run. */
+    private String blockedCause;
+
+    /** Recorded when an absence assertion was used, so the report can state the window. */
+    private String absenceWindowUsed;
+
     public void bind(TestConfig config, ServiceHarness harness,
                      ServiceController service, String scenarioId) {
         this.config = config;
@@ -111,6 +117,34 @@ public class ScenarioContext {
             return enriched.raw();
         }
         return flagged != null ? flagged.raw() : null;
+    }
+
+    public void blocked(String cause) {
+        this.blockedCause = cause;
+    }
+
+    public String blockedCause() {
+        return blockedCause;
+    }
+
+    public boolean isBlocked() {
+        return blockedCause != null;
+    }
+
+    public void absenceWindowUsed(String description) {
+        this.absenceWindowUsed = description;
+    }
+
+    public String absenceWindowUsed() {
+        return absenceWindowUsed;
+    }
+
+    /** The observed message's envelope, which spec 8.4 requires in the evidence. */
+    public com.cozentus.enrichment.tests.model.ConsumedMessage observedMessage() {
+        if (enriched != null) {
+            return enriched.message();
+        }
+        return flagged != null ? flagged.message() : null;
     }
 
     private static <T> T require(T value, String what) {
