@@ -186,3 +186,65 @@ jobs:
             target/scenario-coverage.md
             target/report-data.json
             target/test-execution-summary-report.html
+
+  summary-report:
+    # A separate phase so the Test Execution Summary Report is a first-class
+    # output of the pipeline rather than one file inside a bundle of six. It
+    # runs whatever the test jobs did: a failing run is exactly when someone
+    # needs the report, and the suite is built so that run still produces one.
+    needs: [fast, nightly]
+    if: always() && (needs.fast.result != 'skipped' || needs.nightly.result != 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect the reports the test jobs produced
+        uses: actions/download-artifact@v6
+        with:
+          pattern: cucumber-reports*
+          path: collected
+          merge-multiple: true
+
+      - name: Publish the summary report on its own
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-execution-summary-report
+          path: |
+            collected/test-execution-summary-report.html
+            collected/report-data.json
+            collected/scenario-coverage.md
+          if-no-files-found: error
+
+      - name: Put the headline figures in the run summary
+        run: |
+          REPORT=collected/test-execution-summary-report.html
+          DATA=collected/report-data.json
+          {
+            echo "## Test Execution Summary Report"
+            echo
+            if [ -f "$DATA" ]; then
+              python3 - "$DATA" <<'PY'
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          m = d.get("metrics", {})
+          def figure(key):
+              v = m.get(key)
+              if isinstance(v, dict):
+                  value, detail = v.get("value"), v.get("detail")
+                  if value is None:
+                      return "not measured"
+                  return "%s%% (%s)" % (value, detail) if detail else "%s%%" % value
+              return "not measured" if v is None else v
+          print("| Measure | Value |")
+          print("|---|---|")
+          print("| Critical pass rate | %s |" % figure("critical_pass_rate"))
+          print("| Overall pass rate | %s |" % figure("pass_rate"))
+          print("| Scenario coverage | %s |" % figure("scenario_coverage"))
+          print("| Recommendation | %s |" % d.get("report", {}).get("recommendation", "not stated"))
+          print()
+          print("Figures are read from report-data.json, so nothing here is typed by hand.")
+          PY
+            else
+              echo "report-data.json was not produced, so no figures are available."
+            fi
+            echo
+            echo "Download the rendered HTML from the **test-execution-summary-report** artifact on this run."
+          } >> "$GITHUB_STEP_SUMMARY"
