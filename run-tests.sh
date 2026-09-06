@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Environment profile: SUITE_ENV=local (default) or ci. Chooses which
+# config/test-<env>.properties the suite reads - notably where the
+# service jar and the sample data live, which differ on a CI runner.
 # run-tests.sh — tag-profile entry points for the booking-enrichment test suite.
 # See TEST_SUITE_SPEC.md section 9.3 and section 6.3 for the tag expressions
 # each profile maps to, and docs/TAGGING_GUIDELINE.md for the tagging rules
@@ -36,19 +39,19 @@ PROFILE="$1"
 
 case "$PROFILE" in
   smoke)
-    mvn test -Pkafka -Dcucumber.filter.tags="@smoke"
+    mvn test -Pkafka -Dsuite.env="${SUITE_ENV:-local}" -Dcucumber.filter.tags="@smoke"
     ;;
   functional)
-    mvn test -Pkafka -Dcucumber.filter.tags="@functional and @critical"
+    mvn test -Pkafka -Dsuite.env="${SUITE_ENV:-local}" -Dcucumber.filter.tags="@functional and @critical"
     ;;
   contract)
-    mvn test -Pkafka -Dcucumber.filter.tags="@contract"
+    mvn test -Pkafka -Dsuite.env="${SUITE_ENV:-local}" -Dcucumber.filter.tags="@contract"
     ;;
   full)
-    mvn test -Pkafka -Dcucumber.filter.tags="not @nightly"
+    mvn test -Pkafka -Dsuite.env="${SUITE_ENV:-local}" -Dcucumber.filter.tags="not @nightly"
     ;;
   nightly)
-    mvn test -Pkafka -Pnightly -Dcucumber.filter.tags="@nightly"
+    mvn test -Pkafka -Dsuite.env="${SUITE_ENV:-local}" -Pnightly -Dcucumber.filter.tags="@nightly"
     ;;
   *)
     echo "Unknown profile: '$PROFILE'" >&2

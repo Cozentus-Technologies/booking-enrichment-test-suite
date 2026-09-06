@@ -41,19 +41,19 @@ jobs:
     outputs:
       # A job-level `if` cannot read the secrets context, so whether the
       # credential exists is published here and the integration jobs gate on it.
-      has_service_token: ${{ steps.credential.outputs.present }}
+      has_service_key: ${{ steps.credential.outputs.present }}
     steps:
       - uses: actions/checkout@v5
 
       - name: Is a service credential configured?
         id: credential
         run: |
-          if [ -n "${SERVICE_TOKEN}" ]; then
+          if [ -n "${SERVICE_SSH_KEY}" ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
-            echo "SERVICE_TOKEN is set; the integration jobs will run."
+            echo "SERVICE_SSH_KEY is set; the integration jobs will run."
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::SERVICE_TOKEN is not set, so the integration jobs are skipped."
+            echo "::notice::SERVICE_SSH_KEY is not set, so the integration jobs are skipped."
             echo "They need to clone the private service repository to build and start it."
           fi
 
@@ -81,7 +81,7 @@ jobs:
     needs: unit
     # @smoke and @functional-and-@critical on every push/PR — the two-minute
     # budget in TEST_SUITE_SPEC.md section 9.4.
-    if: needs.unit.outputs.has_service_token == 'true' && github.event_name != 'schedule'
+    if: needs.unit.outputs.has_service_key == 'true' && github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -95,30 +95,30 @@ jobs:
       - name: Start broker
         run: docker compose -f docker-compose.override.yml up -d --wait
 
-      - name: Checkout and start the service under test
+      - name: Authorise the read-only deploy key
         run: |
-          git clone --depth 1 --branch "$SERVICE_REF" \
-            "https://x-access-token:${SERVICE_TOKEN}@github.com/${{ github.repository_owner }}/$SERVICE_REPO.git" service
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SERVICE_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+
+      # Only builds the jar. The suite starts its own service instance per
+      # scenario, on its own topics and its own port; a pre-started one would
+      # subscribe to the default topics that no scenario ever uses.
+      - name: Check out and build the service under test
+        run: |
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes' \
+            git clone --depth 1 --branch "$SERVICE_REF" \
+            "git@github.com:${{ github.repository_owner }}/$SERVICE_REPO.git" service
           cd service
           mvn -q -DskipTests package
-          KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
-            nohup java -jar target/*.jar > ../service.log 2>&1 &
-          echo $! > ../service.pid
-
-      - name: Wait for readiness
-        run: |
-          for i in $(seq 1 30); do
-            if curl -fsS http://localhost:8081/ready; then exit 0; fi
-            sleep 1
-          done
-          echo "service did not become ready in time"; cat service.log; exit 1
+          ls -l target/city-enrichment.jar
 
       - name: Run suite
+        env:
+          SUITE_ENV: ci
         run: ./run-tests.sh functional
 
-      - name: Stop service
-        if: always()
-        run: kill "$(cat service.pid)" 2>/dev/null || true
 
       - name: Publish reports
         if: always()
@@ -134,7 +134,7 @@ jobs:
     needs: unit
     # @nightly volume suite — unbounded budget, scheduled separately from the
     # fast per-commit slice above.
-    if: needs.unit.outputs.has_service_token == 'true' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.profile == 'nightly'))
+    if: needs.unit.outputs.has_service_key == 'true' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.profile == 'nightly'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -148,30 +148,30 @@ jobs:
       - name: Start broker
         run: docker compose -f docker-compose.override.yml up -d --wait
 
-      - name: Checkout and start the service under test
+      - name: Authorise the read-only deploy key
         run: |
-          git clone --depth 1 --branch "$SERVICE_REF" \
-            "https://x-access-token:${SERVICE_TOKEN}@github.com/${{ github.repository_owner }}/$SERVICE_REPO.git" service
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SERVICE_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+
+      # Only builds the jar. The suite starts its own service instance per
+      # scenario, on its own topics and its own port; a pre-started one would
+      # subscribe to the default topics that no scenario ever uses.
+      - name: Check out and build the service under test
+        run: |
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes' \
+            git clone --depth 1 --branch "$SERVICE_REF" \
+            "git@github.com:${{ github.repository_owner }}/$SERVICE_REPO.git" service
           cd service
           mvn -q -DskipTests package
-          KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
-            nohup java -jar target/*.jar > ../service.log 2>&1 &
-          echo $! > ../service.pid
-
-      - name: Wait for readiness
-        run: |
-          for i in $(seq 1 30); do
-            if curl -fsS http://localhost:8081/ready; then exit 0; fi
-            sleep 1
-          done
-          echo "service did not become ready in time"; cat service.log; exit 1
+          ls -l target/city-enrichment.jar
 
       - name: Run nightly (volume) suite
+        env:
+          SUITE_ENV: ci
         run: ./run-tests.sh nightly
 
-      - name: Stop service
-        if: always()
-        run: kill "$(cat service.pid)" 2>/dev/null || true
 
       - name: Publish reports
         if: always()
