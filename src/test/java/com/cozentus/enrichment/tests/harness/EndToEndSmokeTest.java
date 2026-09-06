@@ -26,7 +26,7 @@ class EndToEndSmokeTest {
     private ServiceController service;
 
     private void startWith(String citiesSource) {
-        config = TestConfig.load("local");
+        config = TestConfig.load();
         String scenarioId = TopicProvisioner.newScenarioId();
         harness = new KafkaServiceHarness(config, scenarioId);
         service = ServiceController.start(config, scenarioId,

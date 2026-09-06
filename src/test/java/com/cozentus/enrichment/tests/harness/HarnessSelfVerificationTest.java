@@ -32,7 +32,7 @@ class HarnessSelfVerificationTest {
 
     @BeforeEach
     void setUp() {
-        config = TestConfig.load("local");
+        config = TestConfig.load();
         harness = new KafkaServiceHarness(config, TopicProvisioner.newScenarioId());
         window = Duration.ofSeconds(3);
     }
