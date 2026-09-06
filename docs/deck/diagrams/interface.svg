@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="660" viewBox="0 0 1280 660">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#19415e"/></marker></defs>
+<rect width="1280" height="660" fill="#f7f7f5"/>
+<text x="40" y="44" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="21" font-weight="bold" fill="#19415e">Interface and where the tests attach</text>
+<text x="40" y="68" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="13" fill="#5b6b78">Drawn from ServiceController.java, KafkaServiceHarness.java and test-local.properties. Both crossings are real: an OS process, and a network hop to a broker.</text>
+<line x1="640" y1="100" x2="640" y2="600" stroke="#26a9be" stroke-width="2.5" stroke-dasharray="9 6"/>
+<text x="640" y="94" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="#26a9be">operating-system process boundary</text>
+<rect x="60" y="120" width="420" height="70" fill="#ffffff" stroke="#19415e" stroke-width="1.5"/><text x="270.0" y="151.0" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="15" fill="#19415e">Test suite JVM</text><text x="270.0" y="170.0" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="12" fill="#5b6b78">booking-enrichment-test-suite (surefire)</text>
+<rect x="60" y="215" width="200" height="54" fill="#ffffff" stroke="#19415e" stroke-width="1.5"/><text x="160.0" y="238.0" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="14" fill="#19415e">Cucumber</text><text x="160.0" y="257.0" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="12" fill="#5b6b78">99 scenarios</text>
+<rect x="280" y="215" width="200" height="54" fill="#ffffff" stroke="#19415e" stroke-width="1.5"/><text x="380.0" y="238.0" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="14" fill="#19415e">JUnit</text><text x="380.0" y="257.0" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="12" fill="#5b6b78">182 @Test methods</text>
+<rect x="60" y="290" width="420" height="58" fill="#EFEFEE" stroke="#19415e" stroke-width="1.5"/><text x="270.0" y="315.0" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="14" fill="#19415e">harness/</text><text x="270.0" y="334.0" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="12" fill="#5b6b78">the only package importing org.apache.kafka</text>
+<rect x="800" y="120" width="420" height="70" fill="#ffffff" stroke="#19415e" stroke-width="1.5"/><text x="1010.0" y="151.0" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="15" fill="#19415e">Service JVM</text><text x="1010.0" y="170.0" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="12" fill="#5b6b78">java -jar city-enrichment.jar</text>
+<rect x="800" y="215" width="420" height="54" fill="#EFEFEE" stroke="#19415e" stroke-width="1.5"/><text x="1010.0" y="247.0" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="14" fill="#19415e">started per scenario by ProcessBuilder</text>
+<rect x="800" y="290" width="420" height="58" fill="#ffffff" stroke="#19415e" stroke-width="1.5"/><text x="1010.0" y="324.0" text-anchor="middle" font-family="DejaVu Sans Mono, Menlo, monospace" font-size="14" fill="#19415e">readiness endpoint  GET /ready</text>
+<rect x="380" y="400" width="520" height="180" fill="#ffffff" stroke="#19415e" stroke-width="2"/>
+<text x="640" y="428" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="16" font-weight="bold" fill="#19415e">Apache Kafka broker</text>
+<text x="640" y="448" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="12" fill="#5b6b78">real broker, KafkaProducer / KafkaConsumer - no embedded or in-memory fake</text>
+<rect x="400" y="470" width="152" height="44" fill="#f7f7f5" stroke="#26a9be" stroke-width="1.5"/>
+<text x="476" y="491" text-anchor="middle" font-family="DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#19415e">booking.raw</text>
+<text x="476" y="506" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="10.5" fill="#5b6b78">.&lt;scenarioId&gt; under local</text>
+<rect x="568" y="470" width="152" height="44" fill="#f7f7f5" stroke="#26a9be" stroke-width="1.5"/>
+<text x="644" y="491" text-anchor="middle" font-family="DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#19415e">booking.enriched</text>
+<text x="644" y="506" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="10.5" fill="#5b6b78">.&lt;scenarioId&gt; under local</text>
+<rect x="736" y="470" width="152" height="44" fill="#f7f7f5" stroke="#26a9be" stroke-width="1.5"/>
+<text x="812" y="491" text-anchor="middle" font-family="DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#19415e">booking.flagged</text>
+<text x="812" y="506" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="10.5" fill="#5b6b78">.&lt;scenarioId&gt; under local</text>
+<text x="640" y="546" text-anchor="middle" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="12" fill="#5b6b78">one topic triple and one consumer group per scenario; under suite.env=external the names are used verbatim</text>
+<line x1="270" y1="348" x2="398" y2="468" stroke="#26a9be" stroke-width="1.8" marker-end="url(#a)"/>
+<text x="290" y="420" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="12" fill="#26a9be">publish</text>
+<line x1="830" y1="468" x2="700" y2="348" stroke="#26a9be" stroke-width="1.8" marker-end="url(#a)"/>
+<text x="800" y="420" text-anchor="end" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="12" fill="#26a9be">consume</text>
+<line x1="880" y1="500" x2="1010" y2="350" stroke="#19415e" stroke-width="1.8" marker-end="url(#a)"/>
+<line x1="1010" y1="290" x2="1010" y2="272" stroke="#19415e" stroke-width="1.8" marker-end="url(#a)"/>
+<text x="40" y="620" font-family="Calibri, Montserrat, Helvetica, sans-serif" font-size="12" fill="#5b6b78">Test categories attaching here, by tag actually present: @city-correction 58 · @flagging 37 · @routing 10 · @message-contract 7 · @schema 8 · @resilience 13 · @volume</text>
+</svg>
