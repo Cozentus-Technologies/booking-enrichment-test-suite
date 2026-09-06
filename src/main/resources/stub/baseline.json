@@ -1,0 +1,49 @@
+{
+  "name": "baseline",
+  "describes": "Every input the suite publishes, mapped to the outcome the published contract says it must produce. A run against this fixture is fully green, which is what makes a red result under a mutation fixture attributable to that one mutation and nothing else. Confidence values are plausible members of the contract's [0, 1] interval; only which side of 1.0 they fall on is contractually observable, because the suite never asserts the confidence floor.",
+
+  "mappings": [
+    { "whenCity": "Mumbai",           "thenTopic": "enriched", "thenCity": "Mumbai",    "thenConfidence": 1.0 },
+    { "whenCity": "MUMBAI",           "thenTopic": "enriched", "thenCity": "Mumbai",    "thenConfidence": 1.0 },
+    { "whenCity": "mumbai",           "thenTopic": "enriched", "thenCity": "Mumbai",    "thenConfidence": 1.0 },
+    { "whenCity": "  Mumbai  ",       "thenTopic": "enriched", "thenCity": "Mumbai",    "thenConfidence": 1.0 },
+    { "whenCity": "New Delhi",        "thenTopic": "enriched", "thenCity": "New Delhi", "thenConfidence": 1.0 },
+    { "whenCity": "New   Delhi",      "thenTopic": "enriched", "thenCity": "New Delhi", "thenConfidence": 1.0 },
+    { "whenCity": "  New   Delhi ",   "thenTopic": "enriched", "thenCity": "New Delhi", "thenConfidence": 1.0 },
+    { "whenCity": "Bangalore",        "thenTopic": "enriched", "thenCity": "Bangalore", "thenConfidence": 1.0 },
+    { "whenCity": "Chennai",          "thenTopic": "enriched", "thenCity": "Chennai",   "thenConfidence": 1.0 },
+    { "whenCity": "Kolkata",          "thenTopic": "enriched", "thenCity": "Kolkata",   "thenConfidence": 1.0 },
+    { "whenCity": "Pune",             "thenTopic": "enriched", "thenCity": "Pune",      "thenConfidence": 1.0 },
+    { "whenCity": "Hyderabad",        "thenTopic": "enriched", "thenCity": "Hyderabad", "thenConfidence": 1.0 },
+    { "whenCity": "Ahmedabad",        "thenTopic": "enriched", "thenCity": "Ahmedabad", "thenConfidence": 1.0 },
+
+    { "whenCity": "Mumbi",            "thenTopic": "enriched", "thenCity": "Mumbai",    "thenConfidence": 0.9666666666666667 },
+    { "whenCity": "now delhi",        "thenTopic": "enriched", "thenCity": "New Delhi", "thenConfidence": 0.9444444444444444 },
+    { "whenCity": "Bangalor",         "thenTopic": "enriched", "thenCity": "Bangalore", "thenConfidence": 0.9777777777777777 },
+    { "whenCity": "kolkatta",         "thenTopic": "enriched", "thenCity": "Kolkata",   "thenConfidence": 0.9583333333333334 },
+    { "whenCity": "Ahmedabd",         "thenTopic": "enriched", "thenCity": "Ahmedabad", "thenConfidence": 0.9629629629629629 },
+    { "whenCity": "Pne",              "thenTopic": "enriched", "thenCity": "Pune",      "thenConfidence": 0.9166666666666666 },
+    { "whenCity": "Punr",             "thenTopic": "enriched", "thenCity": "Pune",      "thenConfidence": 0.8833333333333334 },
+    { "whenCity": "Bangalr",          "thenTopic": "enriched", "thenCity": "Bangalore", "thenConfidence": 0.9555555555555556 },
+
+    { "whenCity": "Delh", "whenCities": "default",  "thenTopic": "enriched", "thenCity": "New Delhi", "thenConfidence": 0.9133333333333333 },
+    { "whenCity": "Delh", "whenCities": "extended", "thenTopic": "flagged",  "thenReason": "AMBIGUOUS",
+      "thenCandidates": ["New Delhi", "Delhi"] },
+    { "whenCity": "Delhi", "whenCities": "extended", "thenTopic": "enriched", "thenCity": "Delhi", "thenConfidence": 1.0 }
+  ],
+
+  "whenMissing": { "thenTopic": "flagged", "thenReason": "MISSING" },
+  "default":     { "thenTopic": "flagged", "thenReason": "UNMATCHED" },
+
+  "behaviour": {
+    "silent": false,
+    "constantKey": null,
+    "constantConfidence": null,
+    "reportDestinationUnderOrigin": false,
+    "fabricateMalformedBookingId": false,
+    "normaliseOriginal": false,
+    "reverseSharedKeyOutputs": false,
+    "alsoPublishFlaggedToEnriched": false,
+    "swapOneRoutePair": false
+  }
+}
