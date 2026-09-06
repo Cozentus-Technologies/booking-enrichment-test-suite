@@ -223,10 +223,32 @@ public final class KafkaServiceHarness implements ServiceHarness {
                 .toList();
     }
 
+    /**
+     * Finds this scenario's messages by the booking they carry, not by the key
+     * they were published under.
+     *
+     * <p>B-7 removed the key from the assertions that check it, but correlation
+     * still went through the key, so a service emitting the wrong key produced
+     * no match at all: every routing scenario timed out and reported "nothing
+     * arrived on the enriched topic", which reads as a broken environment rather
+     * than as a broken key. The mutation check found this - mut-const-key turned
+     * TC-21 and TC-30 red alongside the three key scenarios that should fail,
+     * and those two say nothing about keys.
+     *
+     * <p>The key is still accepted as a fallback, because a message that never
+     * parsed carries no booking id of its own; for those the id survives only in
+     * the raw text the service echoed back, which is why the payload is matched
+     * textually rather than by field.
+     */
     private List<ConsumedMessage> observedFor(MessageCollector collector, String bookingId) {
         return observed(collector).stream()
-                .filter(message -> bookingId.equals(message.key()))
+                .filter(message -> carries(message, bookingId))
                 .toList();
+    }
+
+    private boolean carries(ConsumedMessage message, String bookingId) {
+        String payload = message.payload();
+        return (payload != null && payload.contains(bookingId)) || bookingId.equals(message.key());
     }
 
     private MessageCollector collectorFor(String topic) {
