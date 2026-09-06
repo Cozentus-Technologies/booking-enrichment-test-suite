@@ -23,7 +23,8 @@ public final class TopicProvisioner implements AutoCloseable {
     /** Three, matching the service's own topics, so ordering-by-key is a real property. */
     private static final int PARTITIONS = 3;
     private static final short REPLICATION = 1;
-    private static final Duration ADMIN_TIMEOUT = Duration.ofSeconds(30);
+    /** Short on purpose: this client only probes, so a hang is worse than a retry. */
+    private static final Duration ADMIN_TIMEOUT = Duration.ofSeconds(5);
 
     private final Admin admin;
 
@@ -31,6 +32,12 @@ public final class TopicProvisioner implements AutoCloseable {
         Properties properties = new Properties();
         properties.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         properties.put(AdminClientConfig.REQUEST_TIMEOUT_MS_CONFIG, (int) ADMIN_TIMEOUT.toMillis());
+        // A-5: request.timeout.ms alone is not enough. default.api.timeout.ms
+        // governs how long the admin client retries across requests, and at its
+        // 60s default an unreachable broker took a minute to report, which is
+        // long enough that a person assumes the run has hung.
+        properties.put(AdminClientConfig.DEFAULT_API_TIMEOUT_MS_CONFIG, (int) ADMIN_TIMEOUT.toMillis());
+        properties.put(AdminClientConfig.RETRIES_CONFIG, 1);
         this.admin = Admin.create(properties);
     }
 

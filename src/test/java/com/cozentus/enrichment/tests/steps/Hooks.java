@@ -39,6 +39,7 @@ public class Hooks {
      * scenario failures instead of one clear statement of what is not ready.
      */
     private static volatile boolean entryCriteriaChecked = false;
+    private static volatile String entryCriteriaFailure = null;
 
     private final ScenarioContext context;
 
@@ -52,13 +53,25 @@ public class Hooks {
         verifyEntryCriteriaOnce(config);
         String scenarioId = TopicProvisioner.newScenarioId();
 
+        KafkaServiceHarness harness = null;
         try {
-            KafkaServiceHarness harness = new KafkaServiceHarness(config, scenarioId);
+            harness = new KafkaServiceHarness(config, scenarioId);
             ServiceController service = ServiceController.start(config, scenarioId,
                     harness.rawTopic(), harness.enrichedTopic(), harness.flaggedTopic(),
                     citiesSourceFor(scenario));
             context.bind(config, harness, service, scenarioId);
         } catch (RuntimeException prerequisiteFailed) {
+            // A-6: the harness owns three topics and two consumer groups from the
+            // moment it is constructed. If the service then fails to start it was
+            // never bound, so teardown could not find it and the topics survived
+            // the run. Close it here instead.
+            if (harness != null) {
+                try {
+                    harness.close();
+                } catch (RuntimeException ignored) {
+                    // teardown is best effort
+                }
+            }
             // Spec 8.11: cucumber.json has no notion of blocked. Recording the
             // cause keeps "we could not run it" distinct from "we chose not to"
             // and from "it does not work" - three different facts a project
@@ -70,19 +83,29 @@ public class Hooks {
         }
     }
 
+    /**
+     * A-5. The failure is cached and rethrown from every scenario. Setting the
+     * flag before running the check meant only the first scenario reported a
+     * dead broker, and every one after it went on to create topics against a
+     * broker that was not there.
+     */
     private static synchronized void verifyEntryCriteriaOnce(TestConfig config) {
+        if (entryCriteriaFailure != null) {
+            throw new IllegalStateException(entryCriteriaFailure);
+        }
         if (entryCriteriaChecked) {
             return;
         }
-        entryCriteriaChecked = true;
 
         EntryCriteria.Report report = EntryCriteria.run(config);
         report.lines().forEach(line -> System.out.println("  " + line));
+
         if (!report.allPassed()) {
-            throw new IllegalStateException(
-                    "Entry criteria not met, so the run cannot be trusted:\n"
-                            + String.join("\n", report.lines()));
+            entryCriteriaFailure = "Entry criteria not met, so the run cannot be trusted:\n"
+                    + String.join("\n", report.lines());
+            throw new IllegalStateException(entryCriteriaFailure);
         }
+        entryCriteriaChecked = true;
     }
 
     private static String citiesSourceFor(Scenario scenario) {
