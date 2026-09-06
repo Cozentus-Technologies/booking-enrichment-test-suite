@@ -1,0 +1,427 @@
+# spec/test-cases.yaml
+#
+# Feeds: section 5/9/10/11.2/14 of the generated Test Execution Summary
+# Report -- the planned test case set, i.e. the `cases` array's static
+# columns (id, title, module, type, priority, profile) merged at report
+# time against cucumber.json's per-case result (status, duration).
+#
+# Why this cannot be derived from cucumber.json alone (TEST_SUITE_SPEC.md
+# section 8.6, Class B): cucumber.json only ever contains what actually
+# ran in a given invocation. A tag-filtered run (`-Dcucumber.filter.tags`,
+# any of run-tests.sh's five profiles) executes a subset of the 62 defined
+# scenarios, and nothing in that output records how many scenarios exist
+# in total. Without this file, "executed / planned", execution slippage,
+# and "not executed" (as opposed to "does not exist") are all impossible
+# to compute -- there is no denominator.
+#
+# Derivation: scanned, not hand-typed. One entry per @TC-nn tag found in
+# src/test/resources/features/**/*.feature and in the generated
+# target/test-classes/features/functional/city_correction.feature (itself
+# produced from testdata/city-cases.csv by FeatureGenerator -- see
+# docs/traceability-matrix.md's note on why that file traces to two
+# sources at once). module/type/priority are copied verbatim off each
+# scenario's own tag line; profile from @fast/@slow/@nightly. Title is the
+# literal `Scenario:` / `Scenario Outline:` text, including the TC id
+# where the generated feature embeds it in the title itself.
+#
+# 62 cases total: TC-01..TC-29, TC-30..TC-45, TC-50..TC-55, TC-60..TC-64,
+# TC-70..TC-75 (id ranges are not contiguous -- see TEST_SUITE_SPEC.md
+# section 7 and docs/traceability-matrix.md for why).
+#
+# TC-34, TC-38 and TC-60 are Scenario Outlines: Cucumber tags an outline,
+# not an individual Examples row, so each still contributes exactly one
+# entry here (per docs/TAGGING_GUIDELINE.md section 1) even though it
+# expands to more than one executed scenario in cucumber.json.
+#
+# TC-60..TC-64 carry both @nightly and @slow; profile below records
+# "nightly" because that is the run-tests.sh/budgets.yaml bucket the
+# volume suite is actually run and time-budgeted under (TEST_SUITE_SPEC.md
+# section 9.3/9.4, README's "Running the suite" table) -- see the `note`
+# field on each of those five entries.
+
+- id: TC-01
+  title: TC-01 - origin "Mumbai" is corrected to Mumbai
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-02
+  title: TC-02 - origin "MUMBAI" is corrected to Mumbai
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-03
+  title: TC-03 - origin "mumbai" is corrected to Mumbai
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-04
+  title: TC-04 - origin "··Mumbai··" is corrected to Mumbai
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+- id: TC-05
+  title: TC-05 - origin "New···Delhi" is corrected to New Delhi
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+- id: TC-06
+  title: TC-06 - origin "Mumbi" is corrected to Mumbai
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-07
+  title: TC-07 - origin "now·delhi" is corrected to New Delhi
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-08
+  title: TC-08 - origin "Bangalor" is corrected to Bangalore
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-09
+  title: TC-09 - origin "kolkatta" is corrected to Kolkata
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+- id: TC-10
+  title: TC-10 - origin "Ahmedabd" is corrected to Ahmedabad
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+- id: TC-11
+  title: TC-11 - origin "Pne" is corrected to Pune
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-12
+  title: TC-12 - origin "Delh" is corrected to New Delhi
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-13
+  title: TC-13 - origin "Pn" is flagged
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-14
+  title: TC-14 - origin "Mumbaiii" is flagged
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-15
+  title: TC-15 - origin "Warsaw" is flagged
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+- id: TC-16
+  title: TC-16 - origin "Lisbon" is flagged
+  module: City correction
+  type: Functional
+  priority: Medium
+  profile: fast
+- id: TC-17
+  title: TC-17 - an origin of "" is flagged
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+- id: TC-18
+  title: TC-18 - an origin of "···" is flagged
+  module: City correction
+  type: Functional
+  priority: Medium
+  profile: fast
+- id: TC-19
+  title: TC-19 - an absent origin field is flagged
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+- id: TC-20
+  title: TC-20 - a null origin is flagged
+  module: City correction
+  type: Functional
+  priority: Medium
+  profile: fast
+- id: TC-21
+  title: Both cities resolve, so the booking is enriched with both corrected
+  module: Booking level
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-22
+  title: Origin resolves but destination fails, so the booking is flagged naming the destination
+  module: Booking level
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-23
+  title: Both cities fail, producing two reasons ordered origin then destination
+  module: Booking level
+  type: Functional
+  priority: High
+  profile: fast
+- id: TC-24
+  title: A valid city does not rescue a booking that has one invalid city
+  module: Booking level
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-25
+  title: Enrichment metadata retains both original values alongside the corrected ones
+  module: Booking level
+  type: Functional
+  priority: High
+  profile: fast
+- id: TC-26
+  title: Shipper, mode and requested date pass through unchanged
+  module: Booking level
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-27
+  title: An unrecognised extra field does not break processing
+  module: Booking level
+  type: Functional
+  priority: Medium
+  profile: fast
+- id: TC-28
+  title: A confidence score is present for each corrected city
+  module: Booking level
+  type: Functional
+  priority: Medium
+  profile: fast
+- id: TC-29
+  title: Ambiguous input is flagged with candidates listed in reference order
+  module: Booking level
+  type: Functional
+  priority: High
+  profile: slow
+  note: Needs a service instance started against an extended reference list (@Before hook), not just a
+    longer wait.
+- id: TC-30
+  title: An enriched booking reaches the enriched topic
+  module: Routing
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-31
+  title: A flagged booking reaches the flagged topic
+  module: Routing
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-32
+  title: A flagged booking never reaches the enriched topic
+  module: Routing
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-33
+  title: An enriched booking never reaches the flagged topic
+  module: Routing
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-34
+  title: Every booking lands on exactly one output topic
+  module: Routing
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Scenario Outline, 2 Examples rows, one @TC-34 tag on the outline.
+- id: TC-35
+  title: The message key is the booking id on the enriched route
+  module: Message contract
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-36
+  title: The message key is the booking id on the flagged route
+  module: Message contract
+  type: Functional
+  priority: Critical
+  profile: fast
+- id: TC-37
+  title: A publisher correlation-id header survives to the output message
+  module: Message contract
+  type: Functional
+  priority: High
+  profile: fast
+- id: TC-38
+  title: The service stamps the enrichment status header correctly per route
+  module: Message contract
+  type: Functional
+  priority: Medium
+  profile: fast
+  note: Scenario Outline, 2 Examples rows, one @TC-38 tag on the outline.
+- id: TC-39
+  title: Bookings sharing a key retain their relative order
+  module: Message contract
+  type: Functional
+  priority: High
+  profile: slow
+  note: Ordering only has meaning within a partition; needs a broker-backed instance.
+- id: TC-40
+  title: Every enriched message validates against the enriched schema
+  module: Schema contract
+  type: Contract
+  priority: Critical
+  profile: fast
+- id: TC-41
+  title: Every flagged message validates against the flagged schema
+  module: Schema contract
+  type: Contract
+  priority: Critical
+  profile: fast
+- id: TC-42
+  title: A flagged message fails validation against the enriched schema
+  module: Schema contract
+  type: Contract
+  priority: High
+  profile: fast
+- id: TC-43
+  title: An extra unrecognised field does not break schema conformance
+  module: Schema contract
+  type: Contract
+  priority: Medium
+  profile: fast
+- id: TC-44
+  title: Enrichment metadata carries original and corrected values for each city
+  module: Schema contract
+  type: Contract
+  priority: High
+  profile: fast
+- id: TC-45
+  title: A schema change against the previous version is additive only
+  module: Schema contract
+  type: Contract
+  priority: Medium
+  profile: fast
+  note: Does not publish a booking; compares the committed schema file against its previous version.
+- id: TC-50
+  title: A malformed payload is flagged as MALFORMED_MESSAGE
+  module: Resilience
+  type: Resilience
+  priority: Critical
+  profile: fast
+- id: TC-51
+  title: A valid booking published after a malformed one is still processed
+  module: Resilience
+  type: Resilience
+  priority: Critical
+  profile: fast
+- id: TC-52
+  title: A malformed message with no key uses the UNKNOWN fallback
+  module: Resilience
+  type: Resilience
+  priority: Medium
+  profile: fast
+- id: TC-53
+  title: A duplicate booking id is processed each time it arrives
+  module: Resilience
+  type: Resilience
+  priority: High
+  profile: fast
+  note: At-least-once, non-deduplicating by design; asserts both outputs are correct, not that the duplicate
+    is suppressed.
+- id: TC-54
+  title: An empty payload is flagged, not silently dropped
+  module: Resilience
+  type: Resilience
+  priority: Medium
+  profile: fast
+- id: TC-55
+  title: A JSON array where an object is expected is flagged
+  module: Resilience
+  type: Resilience
+  priority: Low
+  profile: fast
+- id: TC-60
+  title: Every booking is accounted for under load
+  module: Volume
+  type: Volume
+  priority: Critical
+  profile: nightly
+  note: 'Scenario Outline (1 Examples row: 1000/150/850). Also tagged @slow; grouped under the nightly
+    budget per README/9.4.'
+- id: TC-61
+  title: Per-topic totals match the oracle after a bulk run
+  module: Volume
+  type: Volume
+  priority: High
+  profile: nightly
+  note: Also tagged @slow; grouped under the nightly budget per README/9.4.
+- id: TC-62
+  title: Per-reason totals match the oracle after a bulk run
+  module: Volume
+  type: Volume
+  priority: High
+  profile: nightly
+  note: Also tagged @slow; grouped under the nightly budget per README/9.4.
+- id: TC-63
+  title: No booking id appears on both output topics after a bulk run
+  module: Volume
+  type: Volume
+  priority: Critical
+  profile: nightly
+  note: Also tagged @slow; grouped under the nightly budget per README/9.4.
+- id: TC-64
+  title: Concurrent publishers lose no messages
+  module: Volume
+  type: Volume
+  priority: High
+  profile: nightly
+  note: Also tagged @slow; grouped under the nightly budget per README/9.4.
+- id: TC-70
+  title: A city name with diacritics is preserved intact on the flagged message
+  module: Edge cases
+  type: Resilience
+  priority: High
+  profile: fast
+- id: TC-71
+  title: Non-Latin script survives the round trip without mangling
+  module: Edge cases
+  type: Resilience
+  priority: Medium
+  profile: fast
+- id: TC-72
+  title: The requested date passes through byte-identical, with no timezone shift
+  module: Edge cases
+  type: Resilience
+  priority: High
+  profile: fast
+- id: TC-73
+  title: An invalid date string is passed through, not rejected
+  module: Edge cases
+  type: Resilience
+  priority: Medium
+  profile: fast
+- id: TC-74
+  title: A very long shipper name is handled or rejected predictably
+  module: Edge cases
+  type: Resilience
+  priority: Low
+  profile: slow
+- id: TC-75
+  title: A payload near the broker message size limit behaves predictably
+  module: Edge cases
+  type: Resilience
+  priority: Low
+  profile: nightly

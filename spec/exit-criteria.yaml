@@ -1,0 +1,83 @@
+# spec/exit-criteria.yaml
+#
+# Feeds: section 14 (Exit criteria evaluation) and, via its `blocking`
+# flags combined with the defect register's release-impact classification
+# (TEST_SUITE_SPEC.md section 8.8), section 2's generated recommendation
+# (Proceed / Proceed with conditions / Hold release) and section 15's
+# sign-off block.
+#
+# Why this cannot be derived from cucumber.json alone (section 8.6, Class
+# B): a target is an agreed decision made before execution, not a fact
+# a test run can produce. cucumber.json can supply the *actual* value for
+# each metric named below; it has no way to supply what counts as passing.
+# Changing a target or adding a criterion is a configuration change to
+# this file, not a code or feature-file change (section 8.7).
+#
+# Sourced from TEST_SUITE_SPEC.md section 10.2 (Exit criteria) and the
+# eight criteria shown in the section 8's worked example report
+# (test-execution-summary-report.html's `R.exitCriteria`), plus
+# section 8.9's metric-formula table for metric naming. Metric names not
+# listed verbatim in 8.9's table (critical_execution_rate, high_pass_rate,
+# open_defects_s1, open_defects_s2_critical, volume_messages_lost) follow
+# the same pattern the spec's own 8.7 example uses for `high_pass_rate`:
+# a named scope (critical / high / s1 / s2-against-critical / volume)
+# applied to a metric family the reporter already computes, rather than a
+# metric absent from the formula table.
+#
+# operator is one of: eq, gte, lte. blocking:true means an unmet criterion
+# forces "Hold release" per section 8.8, regardless of what any other
+# criterion or the defect register says.
+
+- criterion: All critical test cases executed
+  metric: critical_execution_rate
+  operator: eq
+  target: 100
+  blocking: true
+
+- criterion: All critical test cases passed
+  metric: critical_pass_rate
+  operator: eq
+  target: 100
+  blocking: true
+
+- criterion: High priority pass rate
+  metric: high_pass_rate
+  operator: gte
+  target: 95
+  blocking: false
+
+- criterion: No open defect at severity S1
+  metric: open_defects_s1
+  operator: eq
+  target: 0
+  blocking: true
+
+- criterion: No open defect at severity S2 against a critical test case
+  metric: open_defects_s2_critical
+  operator: eq
+  target: 0
+  blocking: true
+
+- criterion: Requirement coverage
+  metric: requirement_coverage
+  operator: eq
+  target: 100
+  blocking: true
+
+- criterion: Execution completion against plan
+  metric: test_case_execution
+  operator: gte
+  target: 95
+  blocking: false
+
+- criterion: No message loss in the volume cycle
+  metric: volume_messages_lost
+  operator: eq
+  target: 0
+  blocking: true
+
+- criterion: Every scenario in the specification executed and accounted for
+  metric: scenario_coverage
+  operator: eq
+  target: 100
+  blocking: true

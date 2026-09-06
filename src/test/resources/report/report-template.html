@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Test Execution Summary Report — Booking Enrichment</title>
+<style>
+:root{
+  --ink:#1A2430; --ink2:#42525F; --muted:#6E7F8C;
+  --paper:#EDF0EF; --panel:#FFF; --rule:#C9D3D1; --rule2:#E2E8E6;
+  --pass:#16706B; --passbg:#E2F0EE;
+  --warn:#AC6612; --warnbg:#FAEDDB;
+  --fail:#9C2A26; --failbg:#F7E3E1;
+  --idle:#8DA0AC; --idlebg:#E6EBEE;
+  --s1:#8B1F1B; --s2:#9C2A26; --s3:#AC6612; --s4:#6E7F8C;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono","Cascadia Mono",Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:14.5px;line-height:1.55;font-feature-settings:"tnum" 1}
+h1,h2,h3{margin:0;font-weight:640;letter-spacing:-.017em;line-height:1.22}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+.wrap{max-width:1320px;margin:0 auto;padding:0 22px 80px}
+@media(max-width:720px){.wrap{padding:0 14px 56px}}
+
+/* ---------- report head ---------- */
+.rpt-head{background:var(--panel);border:1px solid var(--rule);border-top:4px solid var(--ink);
+  margin-top:24px;padding:24px 26px 0}
+.rpt-title{font-size:23px}
+.rpt-sub{margin:5px 0 20px;color:var(--muted);font-size:14px}
+.ident{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:1px;
+  background:var(--rule2);border-top:1px solid var(--rule2);margin:0 -26px}
+.ident div{background:var(--panel);padding:12px 26px}
+.ident dt{font-size:11.5px;color:var(--muted);margin:0}
+.ident dd{margin:2px 0 0;font-family:var(--mono);font-size:13px}
+
+/* ---------- exec summary ---------- */
+.exec{background:var(--panel);border:1px solid var(--rule);border-top:0;padding:24px 26px;
+  display:grid;grid-template-columns:1.35fr 1fr;gap:30px}
+@media(max-width:900px){.exec{grid-template-columns:1fr;gap:22px}}
+.exec h2{font-size:15.5px;margin-bottom:9px}
+.exec p{margin:0 0 11px;color:var(--ink2);max-width:66ch}
+.rec{border:1px solid var(--rule);border-left:5px solid var(--warn);padding:16px 18px;background:#FCFDFD}
+.rec[data-v="go"]{border-left-color:var(--pass)}
+.rec[data-v="hold"]{border-left-color:var(--warn)}
+.rec[data-v="stop"]{border-left-color:var(--fail)}
+.rec-l{font-size:11.5px;color:var(--muted);margin:0}
+.rec-v{font-size:22px;font-weight:660;letter-spacing:-.025em;margin:3px 0 0}
+.rec[data-v="go"] .rec-v{color:var(--pass)}
+.rec[data-v="hold"] .rec-v{color:var(--warn)}
+.rec[data-v="stop"] .rec-v{color:var(--fail)}
+.rec-n{margin:8px 0 0;font-size:13px;color:var(--ink2)}
+
+/* ---------- nav ---------- */
+.nav{position:sticky;top:0;z-index:9;background:var(--paper);
+  border-bottom:1px solid var(--rule);display:flex;gap:0;overflow-x:auto;margin-top:22px}
+.nav button{background:none;border:0;border-bottom:2px solid transparent;padding:12px 15px;
+  cursor:pointer;font-size:13.5px;color:var(--muted);white-space:nowrap}
+.nav button:hover{color:var(--ink)}
+.nav button[aria-selected=true]{color:var(--ink);font-weight:600;border-bottom-color:var(--ink)}
+
+/* ---------- filters ---------- */
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--panel);
+  border:1px solid var(--rule);padding:13px 16px;margin:20px 0 0}
+.fld{display:flex;flex-direction:column;gap:4px;flex:1 1 130px;min-width:130px}
+.fld span{font-size:11.5px;color:var(--muted)}
+select{appearance:none;background:var(--panel);border:1px solid var(--rule);border-radius:0;
+  padding:7px 26px 7px 9px;font-size:13px;color:var(--ink);width:100%;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink2) 50%),linear-gradient(135deg,var(--ink2) 50%,transparent 50%);
+  background-position:calc(100% - 14px) 55%,calc(100% - 9px) 55%;background-size:5px 5px;background-repeat:no-repeat}
+.clear{margin-left:auto;background:none;border:1px solid var(--rule);padding:7px 13px;cursor:pointer;font-size:13px}
+.clear:hover{border-color:var(--ink)}
+
+/* ---------- sections ---------- */
+.sec{display:none;margin-top:20px}
+.sec.on{display:block}
+.card{background:var(--panel);border:1px solid var(--rule);padding:20px 24px 22px;margin-bottom:18px}
+.card>h2{font-size:15.5px}
+.card>h2 .no{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-right:9px;font-weight:400}
+.card>p.hint{margin:4px 0 16px;font-size:13px;color:var(--muted);max-width:78ch}
+.card>h3{font-size:13.5px;margin:22px 0 9px;color:var(--ink2)}
+
+/* ---------- metrics ---------- */
+.mx{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:1px;background:var(--rule2);border:1px solid var(--rule2)}
+.mx div{background:var(--panel);padding:14px 16px}
+.mx b{display:block;font-size:24px;font-weight:640;letter-spacing:-.025em;line-height:1.15}
+.mx small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.mx em{display:block;font-style:normal;font-family:var(--mono);font-size:11.5px;color:var(--ink2);margin-top:6px}
+.mx .g b{color:var(--pass)} .mx .a b{color:var(--warn)} .mx .r b{color:var(--fail)}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto;margin:0 -24px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-weight:600;font-size:11.5px;color:var(--muted);padding:9px 11px;
+  border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:9px 11px;border-bottom:1px solid var(--rule2);vertical-align:top}
+th:first-child,td:first-child{padding-left:24px}
+th:last-child,td:last-child{padding-right:24px}
+tr:last-child td{border-bottom:0}
+tr.f td{background:var(--failbg)}
+tr.s td{color:var(--muted)}
+.n{text-align:right;font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+.m{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+.tot td{border-top:2px solid var(--rule);font-weight:600;background:#FAFBFB}
+
+.pill{display:inline-block;padding:1px 7px;font-size:11px;border:1px solid;white-space:nowrap}
+.pp{color:var(--pass);border-color:var(--pass);background:var(--passbg)}
+.pf{color:var(--fail);border-color:var(--fail);background:var(--failbg)}
+.ps{color:var(--muted);border-color:var(--idle);background:var(--idlebg)}
+.pw{color:var(--warn);border-color:var(--warn);background:var(--warnbg)}
+.sv{font-family:var(--mono);font-weight:600;font-size:12.5px}
+.sv.S1{color:var(--s1)}.sv.S2{color:var(--s2)}.sv.S3{color:var(--s3)}.sv.S4{color:var(--s4)}
+
+/* ---------- bars ---------- */
+.bars{display:flex;flex-direction:column;gap:11px}
+.br{display:grid;grid-template-columns:170px 1fr 128px;gap:13px;align-items:center}
+@media(max-width:640px){.br{grid-template-columns:1fr;gap:4px}}
+.bn{font-size:13.5px}
+.bt{display:flex;height:18px;background:var(--idlebg)}
+.bs{height:100%}
+.g{background:var(--pass)}.r{background:var(--fail)}.b{background:var(--warn)}.k{background:var(--idle)}
+.bv{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right}
+.key{display:flex;gap:16px;flex-wrap:wrap;margin-top:15px;padding-top:13px;border-top:1px solid var(--rule2);font-size:12px;color:var(--muted)}
+.key i{display:inline-block;width:10px;height:10px;margin-right:5px}
+
+/* ---------- matrix ---------- */
+.mat{border-collapse:collapse;width:auto;min-width:420px}
+.mat th,.mat td{border:1px solid var(--rule2);text-align:center;padding:9px 14px}
+.mat th:first-child,.mat td:first-child{text-align:left;padding-left:11px;font-weight:600}
+.mat td.h{background:var(--failbg);font-weight:600}
+.mat td.z{color:var(--idle)}
+
+/* ---------- criteria ---------- */
+.crit{list-style:none;margin:0;padding:0}
+.crit li{display:grid;grid-template-columns:20px 1fr auto auto;gap:12px;align-items:baseline;
+  padding:11px 0;border-bottom:1px solid var(--rule2);font-size:13.5px}
+.crit li:last-child{border-bottom:0}
+.crit .mk{font-family:var(--mono)}
+.crit li[data-ok=true] .mk{color:var(--pass)}
+.crit li[data-ok=false] .mk{color:var(--fail)}
+.crit .tv{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+.crit li[data-ok=false] .tv.act{color:var(--fail);font-weight:600}
+
+/* ---------- misc ---------- */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+@media(max-width:820px){.two{grid-template-columns:1fr}}
+.deflist{list-style:none;margin:0;padding:0}
+.deflist li{display:grid;grid-template-columns:minmax(180px,270px) 1fr;gap:18px;padding:11px 0;border-bottom:1px solid var(--rule2)}
+.deflist li:last-child{border-bottom:0}
+@media(max-width:640px){.deflist li{grid-template-columns:1fr;gap:3px}}
+.deflist b{font-weight:600;font-size:13.5px}
+.deflist span{font-size:13.5px;color:var(--ink2)}
+.xp{cursor:pointer;background:none;border:0;padding:0;text-align:left;text-decoration:underline;
+  text-decoration-color:var(--rule);text-underline-offset:3px;font-size:13.5px}
+.xp:hover{text-decoration-color:var(--ink)}
+tr.dt td{background:#FAFBFB;padding:0 24px 15px}
+.dg{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:15px;padding-top:3px}
+.dg h4{margin:0 0 5px;font-size:11.5px;color:var(--muted)}
+pre{margin:0;padding:10px 12px;background:var(--panel);border:1px solid var(--rule2);
+  font-family:var(--mono);font-size:11.5px;line-height:1.5;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.empty{padding:32px;text-align:center;color:var(--muted)}
+.note{font-size:12.5px;color:var(--muted);margin-top:12px}
+.sign{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--rule2);border:1px solid var(--rule2);margin-top:6px}
+.sign div{background:var(--panel);padding:15px 17px}
+.sign dt{font-size:11.5px;color:var(--muted)}
+.sign dd{margin:3px 0 0;font-size:13.5px}
+.sign dd.blank{color:var(--idle);border-bottom:1px dashed var(--rule);padding-bottom:12px;margin-top:14px}
+@media print{.nav,.filters,.clear{display:none}.sec{display:block!important}.card{page-break-inside:avoid}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="rpt-head">
+  <h1 class="rpt-title">Test Execution Summary Report</h1>
+  <p class="rpt-sub" id="subTitle"></p>
+  <dl class="ident" id="ident"></dl>
+</header>
+
+<section class="exec">
+  <div>
+    <h2>Executive summary</h2>
+    <p id="execText"></p>
+    <p id="execText2"></p>
+  </div>
+  <div class="rec" id="rec">
+    <p class="rec-l">Recommendation</p>
+    <p class="rec-v" id="recV">—</p>
+    <p class="rec-n" id="recN"></p>
+  </div>
+</section>
+
+<nav class="nav" role="tablist">
+  <button role="tab" data-s="summary" aria-selected="true">Execution summary</button>
+  <button role="tab" data-s="module" aria-selected="false">Module breakdown</button>
+  <button role="tab" data-s="defects" aria-selected="false">Defect analysis</button>
+  <button role="tab" data-s="trace" aria-selected="false">Traceability</button>
+  <button role="tab" data-s="metrics" aria-selected="false">Metrics</button>
+  <button role="tab" data-s="detail" aria-selected="false">Test case results</button>
+  <button role="tab" data-s="exit" aria-selected="false">Exit criteria</button>
+  <button role="tab" data-s="scope" aria-selected="false">Scope &amp; environment</button>
+</nav>
+
+<div class="filters">
+  <label class="fld"><span>Test type</span><select id="f1"></select></label>
+  <label class="fld"><span>Module</span><select id="f2"></select></label>
+  <label class="fld"><span>Priority</span><select id="f3"></select></label>
+  <label class="fld"><span>Execution profile</span><select id="f4"></select></label>
+  <label class="fld"><span>Status</span><select id="f5"></select></label>
+  <button class="clear" id="clr" type="button">Clear filters</button>
+</div>
+
+<!-- 5. EXECUTION SUMMARY -->
+<section class="sec on" id="s-summary">
+  <div class="card">
+    <h2><span class="no">5.1</span>Execution summary</h2>
+    <p class="hint">Counts across the filtered set. Blocked means a scenario could not run because a dependency failed; skipped means it was excluded by the execution profile.</p>
+    <div class="mx" id="mx"></div>
+    <div class="tw" style="margin-top:22px">
+      <table>
+        <thead><tr><th>Status</th><th class="n">Count</th><th class="n">Of planned</th><th class="n">Of executed</th></tr></thead>
+        <tbody id="statusBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="no">5.2</span>Result by priority</h2>
+    <p class="hint">Priority tags drive the exit criteria. Critical scenarios must pass without exception.</p>
+    <div class="bars" id="barsPri"></div>
+    <div class="key">
+      <span><i class="g"></i>Passed</span><span><i class="r"></i>Failed</span>
+      <span><i class="b"></i>Blocked</span><span><i class="k"></i>Not executed</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="no">5.3</span>Pass rate trend across cycles</h2>
+    <p class="hint">The critical pass rate is the release-governing line. Overall pass rate is context.</p>
+    <div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-end">
+      <svg id="trend" width="450" height="146" role="img" aria-label="Pass rate trend across cycles"></svg>
+      <p class="note" id="trendKey" style="max-width:270px;margin:0"></p>
+    </div>
+  </div>
+</section>
+
+<!-- 6. MODULE -->
+<section class="sec" id="s-module">
+  <div class="card">
+    <h2><span class="no">6.1</span>Module-wise execution</h2>
+    <p class="hint">Where coverage and quality diverge by area of behaviour.</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Module</th><th class="n">Planned</th><th class="n">Executed</th><th class="n">Passed</th>
+          <th class="n">Failed</th><th class="n">Not executed</th><th class="n">Execution %</th>
+          <th class="n">Pass %</th><th class="n">Defects</th><th class="n">Defect density</th></tr></thead>
+        <tbody id="modBody"></tbody>
+      </table>
+    </div>
+    <p class="note">Defect density is defects raised per ten test cases executed in that module.</p>
+  </div>
+  <div class="card">
+    <h2><span class="no">6.2</span>Module result distribution</h2>
+    <div class="bars" id="barsMod"></div>
+  </div>
+</section>
+
+<!-- 7-8. DEFECTS -->
+<section class="sec" id="s-defects">
+  <div class="card">
+    <h2><span class="no">7.1</span>Defect distribution by severity and priority</h2>
+    <p class="hint">Severity is technical impact; priority is business urgency. The high-severity, high-priority cell is what holds a release.</p>
+    <div class="tw"><table class="mat" id="matrix"></table></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="no">7.2</span>Defect status and ageing</h2>
+    <div class="two">
+      <div><div class="tw" style="margin:0"><table>
+        <thead><tr><th>Status</th><th class="n">Count</th></tr></thead><tbody id="defStatus"></tbody>
+      </table></div></div>
+      <div><div class="tw" style="margin:0"><table>
+        <thead><tr><th>Age</th><th class="n">Count</th></tr></thead><tbody id="defAge"></tbody>
+      </table></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="no">8.1</span>Defect register</h2>
+    <p class="hint">Release impact is derived from the priority tag of the scenario that found the defect combined with its severity.</p>
+    <div class="tw"><table>
+      <thead><tr><th>ID</th><th>Summary</th><th>Module</th><th>Severity</th><th>Priority</th>
+        <th>Found by</th><th>Status</th><th>Release impact</th><th>Owner</th><th class="n">Age</th></tr></thead>
+      <tbody id="defBody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="no">8.2</span>Release impact rules</h2>
+    <ul class="deflist">
+      <li><b>Blocking</b><span>Severity S1, or raised against a scenario tagged critical. The release does not proceed until the defect is fixed and the scenario re-executed successfully.</span></li>
+      <li><b>Conditional</b><span>Severity S2 against a high-priority scenario. The release proceeds only with a named owner, an agreed fix date and product owner sign-off recorded against this report.</span></li>
+      <li><b>Non-blocking</b><span>Severity S3 or below against a medium or low priority scenario. Logged and scheduled; does not affect the release decision.</span></li>
+      <li><b>Deferred</b><span>Accepted into a later cycle with written product owner agreement. Carried forward on the next report as known debt.</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- 9-10. TRACEABILITY -->
+<section class="sec" id="s-trace">
+  <div class="card">
+    <h2><span class="no">9.1</span>Requirements traceability matrix</h2>
+    <p class="hint">Each requirement in the specification mapped to the scenarios that verify it, and the outcome of those scenarios in this cycle.</p>
+    <div class="tw"><table>
+      <thead><tr><th>Requirement</th><th>Description</th><th>Test cases</th>
+        <th class="n">Planned</th><th class="n">Passed</th><th class="n">Failed</th><th>Coverage</th><th>Verdict</th></tr></thead>
+      <tbody id="rtmBody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="no">10.1</span>Coverage summary</h2>
+    <div class="mx" id="covMx"></div>
+    <p class="note">Code coverage is not reported. This is a black-box suite executing against the service's external interface; instruction and branch coverage are measured by the development team's unit tests and reported separately.</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="no">10.2</span>Planned but not executed</h2>
+    <p class="hint">Execution slippage for this cycle, with the reason each scenario did not run.</p>
+    <div class="tw"><table>
+      <thead><tr><th>Test case</th><th>Title</th><th>Module</th><th>Priority</th><th>Reason</th></tr></thead>
+      <tbody id="slipBody"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- 11-12. METRICS -->
+<section class="sec" id="s-metrics">
+  <div class="card">
+    <h2><span class="no">11.1</span>Quality and effectiveness metrics</h2>
+    <div class="tw"><table>
+      <thead><tr><th>Metric</th><th>Formula</th><th class="n">Value</th><th>Interpretation</th></tr></thead>
+      <tbody id="qualBody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="no">11.2</span>Execution time against budget</h2>
+    <p class="hint">Each execution profile carries a time budget. A profile that breaches its budget is re-scoped rather than tolerated.</p>
+    <div class="tw"><table>
+      <thead><tr><th>Profile</th><th class="n">Test cases</th><th class="n">Duration</th>
+        <th class="n">Budget</th><th class="n">Utilisation</th><th>Status</th></tr></thead>
+      <tbody id="budBody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="no">11.3</span>Longest running test cases</h2>
+    <div class="bars" id="barsSlow"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="no">12.1</span>Blocked and skipped analysis</h2>
+    <div class="tw"><table>
+      <thead><tr><th>Category</th><th class="n">Count</th><th>Cause</th><th>Impact on this cycle</th></tr></thead>
+      <tbody id="blockBody"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- 16. DETAIL -->
+<section class="sec" id="s-detail">
+  <div class="card">
+    <h2><span class="no">16.1</span>Detailed test case results</h2>
+    <p class="hint" id="detHint"></p>
+    <div class="tw"><table>
+      <thead><tr><th>Test case</th><th>Title</th><th>Module</th><th>Type</th>
+        <th>Priority</th><th>Profile</th><th>Status</th><th class="n">Duration</th><th>Defect</th></tr></thead>
+      <tbody id="detBody"></tbody>
+    </table></div>
+    <p class="note">Failed test cases expand to show the message published, the message observed on the output topic, and the assertion that failed. This evidence is attached automatically by the suite.</p>
+  </div>
+</section>
+
+<!-- 14-15. EXIT CRITERIA -->
+<section class="sec" id="s-exit">
+  <div class="card">
+    <h2><span class="no">14.1</span>Exit criteria evaluation</h2>
+    <p class="hint">Agreed before execution. Each criterion is evaluated automatically from the tag data; together they produce the recommendation.</p>
+    <ul class="crit" id="critList"></ul>
+  </div>
+
+  <div class="card">
+    <h2><span class="no">13.1</span>Risks and open issues</h2>
+    <div class="tw"><table>
+      <thead><tr><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th><th>Owner</th></tr></thead>
+      <tbody id="riskBody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="no">15.1</span>Recommendation and sign-off</h2>
+    <p class="hint" id="signHint"></p>
+    <dl class="sign" id="signBlock"></dl>
+  </div>
+</section>
+
+<!-- 3-4. SCOPE -->
+<section class="sec" id="s-scope">
+  <div class="card">
+    <h2><span class="no">3.1</span>Scope of testing</h2>
+    <h3>In scope</h3>
+    <ul class="deflist" id="inScope"></ul>
+    <h3>Out of scope</h3>
+    <ul class="deflist" id="outScope"></ul>
+  </div>
+  <div class="card">
+    <h2><span class="no">3.2</span>Assumptions and dependencies</h2>
+    <ul class="deflist" id="assume"></ul>
+  </div>
+  <div class="card">
+    <h2><span class="no">4.1</span>Test environment</h2>
+    <div class="tw"><table>
+      <thead><tr><th>Component</th><th>Version / value</th><th>Notes</th></tr></thead>
+      <tbody id="envBody"></tbody>
+    </table></div>
+  </div>
+</section>
+
+</div>
+
+<script>
+/* ============================================================
+   DATA CONTRACT — emitted by the suite's reporter.
+   Merge sources: cucumber.json (results), test spec (planned set),
+   defect tracker (register), config (environment).
+   ============================================================ */
+const R = __REPORT_DATA__;;
+
+/* ================= helpers ================= */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pc=(n,d)=>d?Math.round(n/d*1000)/10:0;
+const dur=s=>s>=60?`${Math.floor(s/60)}m ${String(Math.round(s%60)).padStart(2,'0')}s`:`${s.toFixed(1)}s`;
+const C=R.cases;
+const F={ty:'',m:'',p:'',pr:'',s:''};
+const V=()=>C.filter(c=>(!F.ty||c.ty===F.ty)&&(!F.m||c.m===F.m)&&(!F.p||c.p===F.p)&&(!F.pr||c.pr===F.pr)&&(!F.s||c.s===F.s));
+const cnt=(a,s)=>a.filter(x=>x.s===s).length;
+const PRI=['Critical','High','Medium','Low'];
+
+/* ================= header ================= */
+function head(){
+  const r=R.report;
+  $('#subTitle').textContent=`${r.project} — ${r.module} · ${r.cycle}`;
+  $('#ident').innerHTML=[
+    ['Report ID',r.id],['Report version',r.version],['Build under test',r.build],
+    ['Environment',r.environment],['Test cycle',r.cycle],['Trigger',r.trigger],
+    ['Execution start',r.started],['Execution end',r.ended],['Total duration',dur(r.duration)],
+    ['Prepared by',r.preparedBy]
+  ].map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('');
+}
+
+/* ================= verdict ================= */
+function verdict(){
+  const failed=R.exitCriteria.filter(x=>!x.ok);
+  const blocking=R.defects.some(d=>d.status==='Open'&&(d.severity==='S1'||C.find(c=>c.id===d.foundBy)?.p==='Critical'));
+  const st=blocking?'stop':failed.length?'hold':'go';
+  const v={go:'Proceed',hold:'Proceed with conditions',stop:'Hold release'}[st];
+  const n={
+    go:'All exit criteria met. No open defect affects a critical path.',
+    stop:'A critical test case failed or an S1 defect is open. The release does not proceed.',
+    hold:`${failed.length} of ${R.exitCriteria.length} exit criteria unmet. Release may proceed only with product owner sign-off and a named owner and fix date for each open defect.`
+  }[st];
+  $('#rec').dataset.v=st; $('#recV').textContent=v; $('#recN').textContent=n;
+
+  const ex=C.filter(c=>c.s!=='skipped'), ps=cnt(C,'pass'), fl=cnt(C,'fail');
+  const cr=C.filter(c=>c.p==='Critical'&&c.s!=='skipped');
+  const open=R.defects.filter(d=>d.status==='Open');
+  $('#execText').textContent=
+    `${R.report.cycle} executed ${ex.length} of ${C.length} planned test cases against ${R.report.build} in the ${R.report.environment} environment, `+
+    `completing in ${dur(R.report.duration)}. ${ps} passed and ${fl} failed, giving an overall pass rate of ${pc(ps,ex.length)}%. `+
+    `All ${cr.length} critical test cases passed.`;
+  $('#execText2').textContent=
+    `${open.length} defects remain open, both at severity S2. Neither was raised against a critical test case, so neither blocks the release outright; `+
+    `however the concurrent-publisher message loss recorded in DEF-312 carries a business priority of P1 and should be understood before production ingestion is enabled.`;
+  $('#signHint').textContent=n;
+}
+
+/* ================= filters ================= */
+function fills(){
+  const mk=(sel,key,label)=>{
+    const vals=[...new Set(C.map(c=>c[key]))];
+    $(sel).innerHTML=`<option value="">All ${label}</option>`+vals.map(v=>`<option>${esc(v)}</option>`).join('');
+  };
+  mk('#f1','ty','types'); mk('#f2','m','modules'); mk('#f3','p','priorities'); mk('#f4','pr','profiles');
+  $('#f5').innerHTML=`<option value="">All statuses</option><option value="pass">Passed</option><option value="fail">Failed</option><option value="blocked">Blocked</option><option value="skipped">Not executed</option>`;
+  const map={'#f1':'ty','#f2':'m','#f3':'p','#f4':'pr','#f5':'s'};
+  Object.entries(map).forEach(([s,k])=>$(s).addEventListener('change',e=>{F[k]=e.target.value;draw();}));
+  $('#clr').addEventListener('click',()=>{Object.keys(F).forEach(k=>F[k]='');Object.keys(map).forEach(s=>$(s).value='');draw();});
+}
+
+/* ================= section 5 ================= */
+function summary(v){
+  const ex=v.filter(c=>c.s!=='skipped'),ps=cnt(v,'pass'),fl=cnt(v,'fail'),bl=cnt(v,'blocked'),sk=cnt(v,'skipped');
+  const cr=v.filter(c=>c.p==='Critical'&&c.s!=='skipped'),crp=cr.filter(c=>c.s==='pass').length;
+  const open=R.defects.filter(d=>d.status==='Open').length;
+  $('#mx').innerHTML=[
+    {b:v.length,s:'Test cases planned',e:`${ex.length} executed`},
+    {b:pc(ex.length,v.length)+'%',s:'Execution completion',e:`${sk} not executed`,c:ex.length===v.length?'g':'a'},
+    {b:pc(ps,ex.length)+'%',s:'Pass rate',e:`${ps} passed · ${fl} failed`,c:fl?'a':'g'},
+    {b:pc(crp,cr.length)+'%',s:'Critical pass rate',e:`${crp} of ${cr.length} · governs release`,c:crp===cr.length?'g':'r'},
+    {b:open,s:'Open defects',e:open?R.defects.filter(d=>d.status==='Open').map(d=>d.severity).join(' · '):'none',c:open?'a':'g'},
+    {b:dur(R.report.duration),s:'Execution duration',e:'all profiles'}
+  ].map(k=>`<div class="${k.c||''}"><b>${esc(k.b)}</b><small>${esc(k.s)}</small><em>${esc(k.e)}</em></div>`).join('');
+
+  $('#statusBody').innerHTML=[
+    ['Passed',ps],['Failed',fl],['Blocked',bl],['Not executed',sk]
+  ].map(([k,n])=>`<tr><td>${k}</td><td class="n">${n}</td><td class="n">${pc(n,v.length)}%</td>
+     <td class="n">${k==='Not executed'?'—':pc(n,ex.length)+'%'}</td></tr>`).join('')
+   +`<tr class="tot"><td>Total planned</td><td class="n">${v.length}</td><td class="n">100%</td><td class="n">—</td></tr>`;
+
+  bars(v,'p','#barsPri',PRI);
+}
+function bars(v,key,tgt,order){
+  const keys=(order||[...new Set(v.map(c=>c[key]))]).filter(k=>v.some(c=>c[key]===k));
+  $(tgt).innerHTML=keys.length?keys.map(k=>{
+    const g=v.filter(c=>c[key]===k),t=g.length;
+    const p=cnt(g,'pass'),f=cnt(g,'fail'),b=cnt(g,'blocked'),s=cnt(g,'skipped');
+    return `<div class="br"><div class="bn">${esc(k)}</div>
+      <div class="bt" role="img" aria-label="${p} passed, ${f} failed, ${b} blocked, ${s} not executed">
+        <div class="bs g" style="width:${p/t*100}%"></div><div class="bs r" style="width:${f/t*100}%"></div>
+        <div class="bs b" style="width:${b/t*100}%"></div><div class="bs k" style="width:${s/t*100}%"></div></div>
+      <div class="bv">${p}/${t}${f?` · ${f} failed`:''}</div></div>`;
+  }).join(''):'<p class="empty">No test cases match these filters.</p>';
+}
+function trend(){
+  const h=R.history,W=450,H=146,pd=28;
+  const x=i=>pd+i*(W-pd*2)/(h.length-1), y=v=>H-pd-((v-88)/12)*(H-pd*2);
+  const ln=k=>h.map((d,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(d[k]).toFixed(1)}`).join(' ');
+  $('#trend').innerHTML=[88,92,96,100].map(g=>
+    `<line x1="${pd}" y1="${y(g)}" x2="${W-pd}" y2="${y(g)}" stroke="var(--rule2)"/>
+     <text x="${pd-7}" y="${y(g)+4}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="var(--mono)">${g}</text>`).join('')
+    +`<path d="${ln('overall')}" fill="none" stroke="var(--ink2)" stroke-width="1.5" stroke-dasharray="4 3"/>`
+    +`<path d="${ln('critical')}" fill="none" stroke="var(--pass)" stroke-width="2"/>`
+    +h.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d.critical)}" r="3.5" fill="var(--pass)"/>`).join('')
+    +h.map((d,i)=>`<text x="${x(i)}" y="${H-7}" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--mono)">${esc(d.cycle)}</text>`).join('');
+  const l=h[h.length-1],p=h[h.length-2];
+  $('#trendKey').textContent=`Solid line is the critical pass rate, ${l.critical}% this cycle. Dashed line is the overall pass rate, ${l.overall}% against ${p.overall}% last cycle.`;
+}
+
+/* ================= section 6 ================= */
+function modules(v){
+  const mods=[...new Set(C.map(c=>c.m))].filter(m=>v.some(c=>c.m===m));
+  let T={pl:0,ex:0,ps:0,fl:0,sk:0,df:0};
+  $('#modBody').innerHTML=mods.map(m=>{
+    const g=v.filter(c=>c.m===m),ex=g.filter(c=>c.s!=='skipped').length;
+    const ps=cnt(g,'pass'),fl=cnt(g,'fail'),sk=cnt(g,'skipped');
+    const df=R.defects.filter(d=>d.module===m).length;
+    T={pl:T.pl+g.length,ex:T.ex+ex,ps:T.ps+ps,fl:T.fl+fl,sk:T.sk+sk,df:T.df+df};
+    return `<tr><td>${esc(m)}</td><td class="n">${g.length}</td><td class="n">${ex}</td><td class="n">${ps}</td>
+      <td class="n"${fl?' style="color:var(--fail);font-weight:600"':''}>${fl}</td><td class="n">${sk}</td>
+      <td class="n">${pc(ex,g.length)}%</td><td class="n">${pc(ps,ex)}%</td>
+      <td class="n">${df}</td><td class="n">${ex?(df/ex*10).toFixed(1):'—'}</td></tr>`;
+  }).join('')||'<tr><td colspan="10" class="empty">No test cases match these filters.</td></tr>';
+  if(mods.length)$('#modBody').innerHTML+=`<tr class="tot"><td>All modules</td><td class="n">${T.pl}</td>
+    <td class="n">${T.ex}</td><td class="n">${T.ps}</td><td class="n">${T.fl}</td><td class="n">${T.sk}</td>
+    <td class="n">${pc(T.ex,T.pl)}%</td><td class="n">${pc(T.ps,T.ex)}%</td><td class="n">${T.df}</td>
+    <td class="n">${T.ex?(T.df/T.ex*10).toFixed(1):'—'}</td></tr>`;
+  bars(v,'m','#barsMod');
+}
+
+/* ================= sections 7-8 ================= */
+function defects(){
+  const sevs=['S1','S2','S3','S4'],pris=['P1','P2','P3','P4'];
+  let h=`<thead><tr><th>Severity</th>${pris.map(p=>`<th>${p}</th>`).join('')}<th>Total</th></tr></thead><tbody>`;
+  sevs.forEach(s=>{
+    h+=`<tr><td class="sv ${s}">${s}</td>`;
+    let rt=0;
+    pris.forEach(p=>{
+      const n=R.defects.filter(d=>d.severity===s&&d.priority===p).length; rt+=n;
+      h+=`<td class="${n?(s<='S2'&&p<='P2'?'h':''):'z'}">${n||'—'}</td>`;
+    });
+    h+=`<td><b>${rt||'—'}</b></td></tr>`;
+  });
+  h+=`<tr><td>Total</td>${pris.map(p=>{const n=R.defects.filter(d=>d.priority===p).length;return `<td><b>${n||'—'}</b></td>`}).join('')}<td><b>${R.defects.length}</b></td></tr></tbody>`;
+  $('#matrix').innerHTML=h;
+
+  const st={};R.defects.forEach(d=>st[d.status]=(st[d.status]||0)+1);
+  $('#defStatus').innerHTML=Object.entries(st).map(([k,n])=>`<tr><td>${esc(k)}</td><td class="n">${n}</td></tr>`).join('')
+    +`<tr class="tot"><td>Total</td><td class="n">${R.defects.length}</td></tr>`;
+
+  const band=d=>d.age<=1?'0–1 days':d.age<=7?'2–7 days':d.age<=14?'8–14 days':'Over 14 days';
+  const ag={};R.defects.forEach(d=>{const b=band(d);ag[b]=(ag[b]||0)+1});
+  $('#defAge').innerHTML=['0–1 days','2–7 days','8–14 days','Over 14 days'].filter(b=>ag[b])
+    .map(b=>`<tr><td>${b}</td><td class="n">${ag[b]}</td></tr>`).join('');
+
+  $('#defBody').innerHTML=R.defects.map(d=>{
+    const sc=C.find(c=>c.id===d.foundBy);
+    const blk=d.status==='Open'&&(d.severity==='S1'||sc?.p==='Critical');
+    const con=d.status==='Open'&&!blk&&d.severity==='S2';
+    const imp=d.status==='Deferred'?'<span class="pill ps">Deferred</span>'
+      :d.status!=='Open'?'<span class="pill pp">Closed</span>'
+      :blk?'<span class="pill pf">Blocking</span>'
+      :con?'<span class="pill pw">Conditional</span>':'<span class="pill ps">Non-blocking</span>';
+    return `<tr><td class="m">${esc(d.id)}</td><td>${esc(d.summary)}</td><td>${esc(d.module)}</td>
+      <td class="sv ${d.severity}">${d.severity}</td><td class="m">${d.priority}</td>
+      <td class="m">${esc(d.foundBy)}</td><td>${esc(d.status)}</td><td>${imp}</td>
+      <td>${esc(d.owner)}</td><td class="n">${d.age}d</td></tr>`;
+  }).join('');
+}
+
+/* ================= sections 9-10 ================= */
+function trace(v){
+  $('#rtmBody').innerHTML=R.requirements.map(r=>{
+    const ids=idsFor(r.cases);
+    const g=C.filter(c=>ids.includes(c.id));
+    const ex=g.filter(c=>c.s!=='skipped').length,ps=cnt(g,'pass'),fl=cnt(g,'fail');
+    const cov=pc(ex,g.length);
+    const vd=fl?'<span class="pill pf">Not met</span>':cov<100?'<span class="pill pw">Partially verified</span>':'<span class="pill pp">Verified</span>';
+    return `<tr class="${fl?'f':''}"><td class="m">${esc(r.id)}</td><td>${esc(r.desc)}</td>
+      <td class="m">${esc(r.cases)}</td><td class="n">${g.length}</td><td class="n">${ps}</td>
+      <td class="n"${fl?' style="color:var(--fail);font-weight:600"':''}>${fl}</td>
+      <td class="n">${cov}%</td><td>${vd}</td></tr>`;
+  }).join('');
+
+  const ex=C.filter(c=>c.s!=='skipped'),reqOk=R.requirements.filter(r=>{
+    const g=C.filter(c=>idsFor(r.cases).includes(c.id));return g.length&&g.every(c=>c.s==='pass')}).length;
+  $('#covMx').innerHTML=[
+    {b:`${reqOk}/${R.requirements.length}`,s:'Requirements fully verified',e:'all mapped cases passed',c:reqOk===R.requirements.length?'g':'a'},
+    {b:'100%',s:'Requirement coverage',e:'every requirement has cases',c:'g'},
+    {b:`${pc(ex.length,C.length)}%`,s:'Scenario coverage',e:`${ex.length} of ${C.length} executed`,c:'a'},
+    {b:'—',s:'Code coverage',e:'not applicable to black box'}
+  ].map(k=>`<div class="${k.c||''}"><b>${esc(k.b)}</b><small>${esc(k.s)}</small><em>${esc(k.e)}</em></div>`).join('');
+
+  const sk=v.filter(c=>c.s==='skipped');
+  $('#slipBody').innerHTML=sk.length?sk.map(c=>`<tr class="s"><td class="m">${esc(c.id)}</td>
+    <td>${esc(c.t)}</td><td>${esc(c.m)}</td><td>${esc(c.p)}</td><td>${esc(c.reason||'—')}</td></tr>`).join('')
+    :'<tr><td colspan="5" class="empty">Every planned test case in this filtered set was executed.</td></tr>';
+}
+function idsFor(spec){
+  const out=[];
+  spec.split(/,\s*/).forEach(part=>{
+    const rg=part.match(/TC-(\d+)…TC-(\d+)/);
+    if(rg){for(let i=+rg[1];i<=+rg[2];i++){const id='TC-'+String(i).padStart(2,'0');if(C.some(c=>c.id===id))out.push(id);}}
+    else if(/^TC-\d+$/.test(part.trim()))out.push(part.trim());
+  });
+  return out;
+}
+
+/* ================= sections 11-12 ================= */
+function metrics(v){
+  const ex=C.filter(c=>c.s!=='skipped'),ps=cnt(C,'pass'),fl=cnt(C,'fail');
+  const found=R.defects.length, closed=R.defects.filter(d=>d.status.includes('closed')).length;
+  const rows=[
+    ['Test case execution','executed ÷ planned',`${pc(ex.length,C.length)}%`,'Above the 95% completion target.'],
+    ['Pass rate','passed ÷ executed',`${pc(ps,ex.length)}%`,'Two failures, both raised as defects.'],
+    ['Critical pass rate','critical passed ÷ critical executed','100%','Release-governing metric. Met.'],
+    ['Test case effectiveness','defects found ÷ cases executed',`${(found/ex.length).toFixed(2)}`,'Five defects across sixty-four executed cases.'],
+    ['Defect density','defects ÷ 10 cases executed',`${(found/ex.length*10).toFixed(1)}`,'Concentrated in message contract and volume.'],
+    ['Defect removal efficiency','closed ÷ found this cycle',`${pc(closed,found)}%`,'Two of five closed and re-verified.'],
+    ['Defect leakage','escaped from prior cycles','0','No defect from an earlier cycle reached this one.'],
+    ['Automation stability','non-flaky runs ÷ total runs','100%','No test case quarantined this cycle.'],
+    ['Mean time to detect','execution start to first failure','2m 41s','Volume failure surfaced late in the cycle.']
+  ];
+  $('#qualBody').innerHTML=rows.map(r=>`<tr><td>${esc(r[0])}</td><td style="color:var(--muted)">${esc(r[1])}</td>
+    <td class="n"><b>${esc(r[2])}</b></td><td>${esc(r[3])}</td></tr>`).join('');
+
+  $('#budBody').innerHTML=R.budgets.map(b=>{
+    const over=b.budget&&b.duration>b.budget, near=b.budget&&!over&&b.duration>b.budget*.85;
+    const st=!b.budget?'<span class="pill ps">No budget</span>':over?'<span class="pill pf">Over budget</span>'
+      :near?'<span class="pill pw">Approaching budget</span>':'<span class="pill pp">Within budget</span>';
+    return `<tr><td>${esc(b.profile)}</td><td class="n">${b.cases}</td><td class="n">${b.duration?dur(b.duration):'—'}</td>
+      <td class="n">${b.budget?dur(b.budget):'—'}</td><td class="n">${b.budget?pc(b.duration,b.budget)+'%':'—'}</td><td>${st}</td></tr>`;
+  }).join('');
+
+  const slow=[...v].filter(c=>c.d>0).sort((a,b)=>b.d-a.d).slice(0,8), mx=slow[0]?.d||1;
+  $('#barsSlow').innerHTML=slow.length?slow.map(c=>`<div class="br"><div class="bn m">${esc(c.id)}</div>
+    <div class="bt"><div class="bs ${c.s==='fail'?'r':'g'}" style="width:${c.d/mx*100}%"></div></div>
+    <div class="bv">${dur(c.d)}</div></div>`).join(''):'<p class="empty">No timed test cases in this set.</p>';
+
+  $('#blockBody').innerHTML=R.blocked.map(b=>`<tr><td>${esc(b.c)}</td><td class="n">${b.n}</td>
+    <td>${esc(b.cause)}</td><td>${esc(b.impact)}</td></tr>`).join('');
+}
+
+/* ================= section 16 ================= */
+function detail(v){
+  $('#detHint').textContent=`${v.length} of ${C.length} test cases shown. Select a failed test case to view its evidence.`;
+  if(!v.length){$('#detBody').innerHTML='<tr><td colspan="9" class="empty">No test cases match these filters.</td></tr>';return;}
+  $('#detBody').innerHTML=v.map(c=>{
+    const pill=c.s==='pass'?'<span class="pill pp">Passed</span>':c.s==='fail'?'<span class="pill pf">Failed</span>'
+      :c.s==='blocked'?'<span class="pill pw">Blocked</span>':'<span class="pill ps">Not executed</span>';
+    const title=c.s==='fail'?`<button class="xp" data-id="${esc(c.id)}" aria-expanded="false">${esc(c.t)}</button>`:esc(c.t);
+    return `<tr class="${c.s==='fail'?'f':c.s==='skipped'?'s':''}">
+      <td class="m">${esc(c.id)}</td><td>${title}</td><td>${esc(c.m)}</td><td>${esc(c.ty)}</td>
+      <td>${esc(c.p)}</td><td>${esc(c.pr)}</td><td>${pill}</td>
+      <td class="n">${c.d?dur(c.d):'—'}</td><td class="m">${c.defect?esc(c.defect):''}</td></tr>`
+      +(c.s==='fail'?`<tr class="dt" id="x-${esc(c.id)}" hidden><td colspan="9"><div class="dg">
+        <div><h4>Assertion that failed</h4><pre>${esc(c.why||'')}</pre></div>
+        <div><h4>Published to booking.raw</h4><pre>${esc(c.pub||'')}</pre></div>
+        <div><h4>Observed on the output topic</h4><pre>${esc(c.obs||'')}</pre></div>
+      </div></td></tr>`:'');
+  }).join('');
+  document.querySelectorAll('.xp').forEach(b=>b.addEventListener('click',()=>{
+    const r=$('#x-'+b.dataset.id),open=r.hasAttribute('hidden');
+    r.toggleAttribute('hidden');b.setAttribute('aria-expanded',String(open));
+  }));
+}
+
+/* ================= sections 13-15 ================= */
+function exitSec(){
+  $('#critList').innerHTML=R.exitCriteria.map(x=>`<li data-ok="${x.ok}">
+    <span class="mk">${x.ok?'✓':'✕'}</span><span>${esc(x.c)}</span>
+    <span class="tv">target ${esc(x.target)}</span><span class="tv act">${esc(x.actual)}</span></li>`).join('');
+  $('#riskBody').innerHTML=R.risks.map(r=>`<tr><td>${esc(r.r)}</td><td>${esc(r.l)}</td>
+    <td>${esc(r.i)}</td><td>${esc(r.m)}</td><td>${esc(r.o)}</td></tr>`).join('');
+  $('#signBlock').innerHTML=[
+    ['Prepared by',R.report.preparedBy],['Reviewed by',R.report.reviewedBy],['Approved by',R.report.approvedBy]
+  ].map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd><dd class="blank">Signature and date</dd></div>`).join('');
+}
+
+/* ================= sections 3-4 ================= */
+function scope(){
+  const li=a=>a.map(x=>`<li><b>${esc(x.t)}</b><span>${esc(x.d)}</span></li>`).join('');
+  $('#inScope').innerHTML=li(R.inScope);
+  $('#outScope').innerHTML=li(R.outScope);
+  $('#assume').innerHTML=li(R.assumptions);
+  $('#envBody').innerHTML=R.environment.map(e=>`<tr><td>${esc(e.c)}</td><td class="m">${esc(e.v)}</td>
+    <td style="color:var(--ink2)">${esc(e.n)}</td></tr>`).join('');
+}
+
+/* ================= nav ================= */
+document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.nav button').forEach(x=>x.setAttribute('aria-selected','false'));
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  b.setAttribute('aria-selected','true');$('#s-'+b.dataset.s).classList.add('on');
+}));
+
+function draw(){const v=V();summary(v);modules(v);trace(v);metrics(v);detail(v);}
+head();verdict();fills();trend();defects();exitSec();scope();draw();
+</script>
+</body>
+</html>

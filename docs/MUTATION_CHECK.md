@@ -145,3 +145,41 @@ than guessing — an empty cell here is honest; a fabricated one is not.
 
 No results are recorded above. This table is a template for whoever runs the
 check next, not a claim that it has already been run.
+
+## Results — run 2026-09-06 against city-enrichment at commit 9860876
+
+All seven mutations were applied one at a time to the service source, the jar
+rebuilt, the affected tag slice run, and the service restored with
+`git checkout` before the next. The service repository was verified clean
+afterwards.
+
+| # | Mutation | Expected to go red | Observed |
+|---|---|---|---|
+| 1 | Jaro-Winkler floor raised to 0.99 | TC-06…TC-12 | **Exactly TC-06…TC-12.** TC-01 stayed green |
+| 2 | Distance cap forced to 0 | All fuzzy correction cases | **TC-06…TC-12 red; TC-01…TC-05 green** |
+| 3 | Flagged bookings also published to enriched | TC-32, TC-34, TC-42 | TC-32, TC-34 red. **TC-42 did NOT fire** — see below |
+| 4 | Message key set to a constant | TC-35, TC-36 | TC-35, TC-36 **and** TC-30, TC-31 |
+| 5 | Inbound headers dropped | TC-37 | **Exactly TC-37** |
+| 6 | Canonical casing not applied | TC-02, TC-03 | TC-02, TC-03 **and** TC-06, TC-07 |
+| 7 | Original values omitted from metadata | TC-25, TC-44 | TC-25, TC-44 **and** TC-40 |
+
+Seven of seven were caught. The precision matters as much as the catching:
+mutation 2 turned every fuzzy case red while leaving all five exact, casing and
+whitespace cases green, which is a suite discriminating rather than collapsing.
+
+### Mutation 3 falsified a claim in the specification
+
+TEST_SUITE_SPEC section 7.5 states that TC-42 is a second, independent mechanism
+catching a flagged booking that reaches the enriched topic — "two mechanisms
+catching the same class of defect on the critical path". It is not, as built:
+
+- TC-42 validates a flagged payload against the enriched schema in isolation, so
+  routing does not affect its outcome.
+- TC-40 only publishes a booking that enriches successfully, so no flagged
+  payload ever reaches its topic to be caught.
+
+Routing exclusivity therefore rests on TC-32 and TC-34 alone. Raised as DEF-111,
+the only open defect in `defects.csv`.
+
+Mutation 7 showed the schema **does** work as a second mechanism where it is
+wired to: TC-40 caught null enrichment metadata that TC-25 was aiming at.

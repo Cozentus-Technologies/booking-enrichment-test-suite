@@ -1,0 +1,159 @@
+# spec/requirements.yaml
+#
+# Feeds: section 9 (Requirements Traceability Matrix), section 10 (coverage
+# summary and execution slippage), section 11.2 (quality/coverage metrics)
+# of the generated report -- specifically `requirement_coverage` and
+# `requirement_verification` (TEST_SUITE_SPEC.md section 8.9).
+#
+# Why this cannot be derived from cucumber.json alone (section 8.6, Class
+# B): cucumber.json carries only the test-case side of the RTM (which
+# scenario ran, tagged with which @TC-nn). It has no notion of a
+# requirement or of which cases jointly verify one. The requirement side
+# of the mapping -- what business/contract behaviour each group of TC ids
+# is actually there to prove -- is a judgement call authored once here,
+# not a fact recoverable from any run's output.
+#
+# Each requirement below is a real behaviour the suite verifies, derived
+# from TEST_SUITE_SPEC.md section 7's scenario catalogue and
+# docs/traceability-matrix.md's per-TC mapping to SPEC.md clauses -- not
+# invented independently of what the feature files actually assert. Every
+# TC id cited here was verified to exist in the feature files (see the
+# verification script run alongside this file). Every one of the suite's
+# 62 @TC-nn scenarios appears under at least one requirement below.
+#
+# `criticality` is an authored judgement (critical/high/medium/low),
+# distinct from any single test case's own @critical/@high/@medium/@low
+# priority tag -- a requirement can be high-criticality even where its
+# individual cases span several priorities.
+
+- id: REQ-01
+  description: A raw city name is corrected against the reference master data -- exact match, casing and
+    whitespace variation, fuzzy correction within the agreed confidence threshold, rejection of candidates
+    beyond the threshold (including the boundary pairs either side of the cut-off), token-level resolution,
+    and ambiguous near-equal candidates rejected rather than arbitrarily resolved.
+  cases:
+  - TC-01
+  - TC-02
+  - TC-03
+  - TC-04
+  - TC-05
+  - TC-06
+  - TC-07
+  - TC-08
+  - TC-09
+  - TC-10
+  - TC-11
+  - TC-12
+  - TC-13
+  - TC-14
+  - TC-15
+  - TC-16
+  - TC-29
+  criticality: high
+- id: REQ-02
+  description: A degenerate city value -- empty, whitespace-only, null, or an absent field -- is flagged
+    with a MISSING reason rather than treated as an unmatched fuzzy candidate.
+  cases:
+  - TC-17
+  - TC-18
+  - TC-19
+  - TC-20
+  criticality: high
+- id: REQ-03
+  description: A booking is enriched only when both its origin and destination cities resolve; if either
+    fails the whole booking is flagged, the failing field(s) named deterministically (both reasons, origin
+    then destination, when both fail), and a valid city on one field never rescues a booking with an invalid
+    city on the other. Enrichment metadata and match confidence are retained for audit.
+  cases:
+  - TC-21
+  - TC-22
+  - TC-23
+  - TC-24
+  - TC-25
+  - TC-28
+  criticality: critical
+- id: REQ-04
+  description: Fields unrelated to city matching (shipper, mode, requestedDate) pass through the enrichment
+    step unchanged, and an unrecognised additional field does not break processing.
+  cases:
+  - TC-26
+  - TC-27
+  criticality: medium
+- id: REQ-05
+  description: 'Every booking lands on exactly one of the two output topics, never both and never neither:
+    an enriched booking reaches booking.enriched and is confirmed absent from booking.flagged, a flagged
+    booking reaches booking.flagged and is confirmed absent from booking.enriched, by bounded observation
+    in both directions.'
+  cases:
+  - TC-30
+  - TC-31
+  - TC-32
+  - TC-33
+  - TC-34
+  criticality: critical
+- id: REQ-06
+  description: 'Message identity and trace metadata survive enrichment on both output routes: the message
+    key is the booking id, publisher-supplied headers (including correlation-id) are propagated, the service
+    stamps its own enrichment-status header correctly per route, and bookings sharing a key retain their
+    relative order.'
+  cases:
+  - TC-35
+  - TC-36
+  - TC-37
+  - TC-38
+  - TC-39
+  criticality: high
+- id: REQ-07
+  description: Every output message conforms structurally to its route's published JSON Schema (booking-enriched-v1
+    / booking-flagged-v1); a flagged message fails validation against the enriched schema, giving routing
+    exclusivity a second, independent enforcement mechanism at the contract layer; an unrecognised extra
+    field does not break conformance; enrichment metadata carries both the original and corrected value
+    per city; and a schema change against its previous committed version is additive only.
+  cases:
+  - TC-40
+  - TC-41
+  - TC-42
+  - TC-43
+  - TC-44
+  - TC-45
+  criticality: critical
+- id: REQ-08
+  description: 'The raw-topic consumer never throws out of its message handler: a malformed (unparseable,
+    empty, or wrongly-shaped) payload is flagged with MALFORMED_MESSAGE rather than dropped or left to
+    crash the consumer, a keyless malformed message uses the UNKNOWN key fallback, the next valid message
+    is still processed after a bad one, and duplicate delivery of the same booking id under at-least-once
+    semantics produces two independently-correct outputs rather than being suppressed.'
+  cases:
+  - TC-50
+  - TC-51
+  - TC-52
+  - TC-53
+  - TC-54
+  - TC-55
+  criticality: critical
+- id: REQ-09
+  description: 'Correctness holds at volume: one thousand mixed bookings are fully reconciled against
+    a deterministic oracle, per-topic and per-reason totals match, no booking id appears on both output
+    topics, and concurrent publishers lose no messages. Framed as correctness at scale, not a throughput
+    measurement (TEST_SUITE_SPEC.md section 13.6).'
+  cases:
+  - TC-60
+  - TC-61
+  - TC-62
+  - TC-63
+  - TC-64
+  criticality: high
+- id: REQ-10
+  description: Character encoding (diacritics, non-Latin script) is preserved byte-identical end to end;
+    requestedDate passes through byte-identical with no timezone shift, including a syntactically invalid
+    date string, since the service treats it as an opaque field rather than round-tripping it through
+    a date type; and oversized or unusually large fields/payloads are handled predictably -- one mandated
+    outcome or the other, never a crash, a hang, or silent truncation.
+  cases:
+  - TC-70
+  - TC-71
+  - TC-72
+  - TC-73
+  - TC-74
+  - TC-75
+  criticality: medium

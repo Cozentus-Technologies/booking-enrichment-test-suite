@@ -1,0 +1,44 @@
+# defects.csv
+#
+# Feeds: section 7 (severity/priority analysis), section 8 (defect
+# register with release-impact classification, TEST_SUITE_SPEC.md section
+# 8.8), and section 11.2/14 metrics that depend on the defect feed
+# (defect_removal_efficiency, defect_leakage, defect_density -- section
+# 8.9).
+#
+# This is the Class C fallback (TEST_SUITE_SPEC.md section 8.6): the
+# report's authoritative defect source is a Jira REST feed; when no such
+# feed is configured, this committed CSV stands in for it. Class C data
+# points (defect id, summary, severity, priority, status, owner, raised
+# date, and everything computed from them) are otherwise not derivable
+# from cucumber.json, spec/*.yaml, or run history at all -- a test result
+# says a scenario failed, never why, who owns the fix, or whether it was
+# later closed.
+#
+# Every row is a genuine defect found during this suite's own
+# development, evidenced by a real commit in this repository's history
+# (see the `raised` date against `git log --oneline`) or, for DEF-111, by
+# a mutation-check run (docs/MUTATION_CHECK.md, mutation 3) whose result
+# has not yet been written back into that document's own results table.
+# None is invented. Only DEF-111 is Open -- it is a real, currently
+# unresolved gap, not a placeholder; every other row was fixed in the
+# commit named in its summary and is closed against that commit as
+# evidence, so `git show <hash>` reproduces the fix.
+#
+# module here follows the suite's own layering (docs/MAINTENANCE.md) --
+# CI, Build, Harness, Step definitions, and the feature modules from
+# spec/test-cases.yaml -- not the service's modules; several rows are
+# suite-side defects (the suite testing itself, TEST_SUITE_SPEC.md section
+# 11.1's rationale for the mutation check) rather than service defects.
+id,summary,module,severity,priority,status,owner,raised,test_case
+DEF-101,HarnessSelfVerificationTest found nothingArrivedFor() could pass without ever observing a message that was actually present mid-window; TC-32's absence assertion rested entirely on it and could not have failed before it was strengthened to sample throughout the window and judge absence per booking id. Commit 1bfe9b6.,Harness,S2,P2,Closed,Test Automation Engineer,2026-09-06,TC-32
+DEF-102,"TC-39 asserted on a drain() snapshot taken immediately after publishing instead of polling until both outputs for the shared key had arrived, so the ordering scenario raced the service and failed for a reason that looked like an ordering defect and was a missing wait in the suite. Commit 3992565.",Message contract,S2,P2,Closed,Test Automation Engineer,2026-09-06,TC-39
+DEF-103,"EndToEndSmokeTest and HarnessSelfVerificationTest called TestConfig.load(""local"") with the profile hardcoded instead of TestConfig.load(), so -Dsuite.env=ci was ignored and both tests looked for the service jar at a local-only path that does not exist on a CI runner; CI could never pass regardless of what else was fixed. Commit e7aa8a6.",CI,S1,P1,Closed,Test Automation Engineer,2026-09-06,
+DEF-104,"The CI workflow's credential check read $SERVICE_SSH_KEY while the env block still exported the token name it replaced, SERVICE_TOKEN, so the variable was never set and the integration jobs skipped despite the secret existing on the repository -- a green, uninformative run with the wrong stated reason. Commit fab2bee.",CI,S2,P2,Closed,Test Automation Engineer,2026-09-06,
+DEF-105,"Surefire's default include pattern named only **/RunCucumberTest.java, a class that did not exist yet, so `mvn test` ran zero tests and reported BUILD SUCCESS -- a green build testing nothing, and one that would have permanently excluded the suite's own plain-JUnit helper tests as well. Commit fbd2909.",Build,S1,P1,Closed,Test Automation Engineer,2026-09-06,
+DEF-106,"RunCucumberTest carried no JUnit tag, so an untagged `mvn test` included it and it silently used whatever Kafka broker happened to be running locally -- green with a broker present, but would fail unpredictably on a runner with none, with no signal that the default build was ever meant to need one. Commit 3913e77.",Build,S2,P2,Closed,Test Automation Engineer,2026-09-06,
+DEF-107,"Step definitions appended the schema version a second time when validating against a schema named as published (e.g. ""booking-enriched-v1""), looking up ""booking-enriched-v1-v1"" and failing six schema-contract scenarios that were otherwise correctly implemented. Commit 99342dd.",Schema contract,S2,P2,Closed,Test Automation Engineer,2026-09-06,TC-40
+DEF-108,"TC-38's route-matching step compared the outcome ""ENRICHED"" (as given in the Examples table) against the lower-case topic name, fell through to the flagged branch, and waited the full poll timeout for a message that was never coming on that topic. Commit 99342dd.",Message contract,S3,P3,Closed,Test Automation Engineer,2026-09-06,TC-38
+DEF-109,"The step ""its origin is X and its destination is Y"", used as setup before a booking is published in TC-26, TC-72, TC-73 and TC-74, was implemented as a Then instead of a Given, so it ran as an assertion during setup and failed looking for an output message that could not exist yet. Reclassified as a Given that amends the staged booking. Commit 99342dd.",Step definitions,S2,P2,Closed,Test Automation Engineer,2026-09-06,TC-26
+DEF-110,"TC-51 stages a malformed payload and a valid booking in two separate Given steps sharing one staging slot; the second Given overwrote the first, so the scenario published the booking twice and never actually sent a malformed payload, despite the assertion appearing to pass. Raw and booking payloads now use separate slots. Commit 99342dd.",Resilience,S2,P2,Closed,Test Automation Engineer,2026-09-06,TC-51
+DEF-111,"Mutation 3 (docs/MUTATION_CHECK.md: flagged bookings also published to the enriched topic) was run against a mutated service and showed TC-42 does not fail: a flagged message that also lands on booking.enriched still passes validation against the booking-enriched-v1 schema, so the ""two independent mechanisms"" enforcing routing exclusivity claimed by TEST_SUITE_SPEC.md section 13.6 and the schema_contract.feature TC-42 comment do not actually both hold -- only TC-32's behavioural check does. Not yet reflected back into docs/MUTATION_CHECK.md's own (blank) results table.",Schema contract,S2,P1,Open,Test Automation Engineer,2026-09-06,TC-42

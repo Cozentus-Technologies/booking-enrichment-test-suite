@@ -1,0 +1,27 @@
+# spec/report.yaml
+#
+# Feeds: section 1 (Report identification) of the generated report --
+# the fields `R.report` carries that are not build/CI/run metadata
+# (build, environment, cycle, started/ended, trigger are Class D, read
+# from CI environment variables and the service's own /health endpoint,
+# TEST_SUITE_SPEC.md section 8.6).
+#
+# Why this cannot be derived from cucumber.json alone (section 8.6, Class
+# B): a project name, a module name, a report id's stable prefix, and who
+# holds each sign-off role are organisational facts, not run output.
+# cucumber.json has no field for any of them.
+#
+# project/module match this suite's own stated boundary (README.md's
+# opening paragraph, TEST_SUITE_SPEC.md section 2). The three roles match
+# TEST_SUITE_SPEC.md section 8.1's four-audience table and section 8.5's
+# section-1 "prepared/reviewed/approved by" row: the suite is prepared by
+# the person who runs it, reviewed by the audience who reads the module
+# breakdown and defect analysis, approved by the audience who accepts the
+# release-impact classification and signs off the recommendation.
+
+project: "Booking Enrichment — TMS publishing pipeline"
+module: "City enrichment service"
+report_id_prefix: "TESR-BE"
+prepared_by_role: "Test Automation Engineer"
+reviewed_by_role: "Technical Architect"
+approved_by_role: "Product Owner"

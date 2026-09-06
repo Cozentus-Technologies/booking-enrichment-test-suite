@@ -114,6 +114,14 @@
 
     <!-- ==================== Assertions ==================== -->
     <dependency>
+      <!-- Spec 8.10: SnakeYAML for the spec/*.yaml inputs. Jackson and the JSON
+           schema validator are already present; nothing else is added. -->
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <version>2.3</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
       <version>${assertj.version}</version>
@@ -194,6 +202,19 @@
               <arguments>
                 <argument>${project.build.testOutputDirectory}/features/functional/city_correction.feature</argument>
               </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <!-- Spec 8.10: the Test Execution Summary Report, generated after the
+                 tests have written cucumber.json. Generation must never fail the
+                 build, so the generator catches its own errors and the run result
+                 stands regardless. -->
+            <id>generate-execution-summary-report</id>
+            <phase>test</phase>
+            <goals><goal>java</goal></goals>
+            <configuration>
+              <classpathScope>test</classpathScope>
+              <mainClass>com.cozentus.enrichment.tests.report.ReportGenerator</mainClass>
             </configuration>
           </execution>
         </executions>

@@ -1,0 +1,51 @@
+# spec/budgets.yaml
+#
+# Feeds: section 10 (execution time against budget), section 11.2 (budget
+# utilisation = actual duration / budgeted duration, TEST_SUITE_SPEC.md
+# section 8.9), and the "Execution time budget" row of the section 8's
+# worked example (`R.budgets`).
+#
+# Why this cannot be derived from cucumber.json alone (section 8.6, Class
+# B): a budget is a decision about what duration is acceptable, agreed
+# before the run, not a measurement the run itself produces. cucumber.json
+# supplies the actual duration per case/profile; it has no concept of what
+# that duration was supposed to be under.
+#
+# Values are TEST_SUITE_SPEC.md section 9.4 verbatim:
+#   @smoke                          60 seconds
+#   @fast                           2 minutes  (120s)
+#   Full excluding volume ("slow")  5 minutes  (300s)
+#   Nightly (the volume suite)      unbounded
+#
+# "slow" here names the full-suite-excluding-volume budget band from
+# section 9.4, not literally only the scenarios tagged @slow -- TC-60..
+# TC-64 (volume) carry @slow as well as @nightly but are budgeted, and
+# run (README's `./run-tests.sh nightly`), under "nightly" alone, per
+# spec/test-cases.yaml's note on those five entries.
+#
+# nightly has no budget_seconds (unbounded, section 9.4) and so no
+# meaningful warn_at_percent either -- both are null rather than omitted,
+# so the reporter can tell "no budget defined for this profile" apart from
+# "profile missing from this file entirely".
+#
+# warn_at_percent is TEST_SUITE_SPEC.md section 8.7's own worked example
+# value (85) for the profiles that carry a real budget; section 9.4 states
+# "an unenforced budget is decoration" but does not itself name a warn
+# threshold below the hard budget, so all three bounded profiles use the
+# spec's own example figure rather than three unrelated numbers.
+
+- profile: smoke
+  budget_seconds: 60
+  warn_at_percent: 85
+
+- profile: fast
+  budget_seconds: 120
+  warn_at_percent: 85
+
+- profile: slow
+  budget_seconds: 300
+  warn_at_percent: 85
+
+- profile: nightly
+  budget_seconds: null
+  warn_at_percent: null

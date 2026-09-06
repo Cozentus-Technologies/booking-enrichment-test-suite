@@ -1,0 +1,79 @@
+# spec/risks.yaml
+#
+# Feeds: section 13 (Risks and open issues) of the generated report, from
+# `R.risks`.
+#
+# Why this cannot be derived from cucumber.json, or generated at all
+# (TEST_SUITE_SPEC.md section 8.6, Class F -- "genuine engineering
+# judgement", and section 8.13 item 3): a risk is a judgement about what
+# could go wrong and why it matters, made by a person who has looked at
+# the suite's own history and gaps. No test run produces this.
+#
+# Every entry below is grounded in an actual, findable observation in this
+# repository -- a doc that says so, or a commit that shows so -- not a
+# generic risk-register template. The source is cited on each mitigation
+# line.
+
+- risk: Six of the seven mutation-check breakages were verified once, on 2026-09-06, against a
+    single service build. They are not re-run per cycle, so a regression in the suite's own ability
+    to detect a given class of defect would not be noticed until the check is run again.
+  likelihood: Low
+  impact: High
+  mitigation: docs/MUTATION_CHECK.md records the 2026-09-06 results; all seven were caught. Re-run
+    before any release, and treat a mutation that stops being caught as a suite defect.
+  owner: Test Automation Engineer
+
+
+- risk: Mutation 3 (flagged bookings also published to enriched) was run and showed TC-42 does not catch
+    a flagged booking leaking onto the enriched topic. TEST_SUITE_SPEC.md section 13.6 and docs/MUTATION_CHECK.md's
+    own notes claim routing exclusivity is enforced by two independent mechanisms -- TC-32 behaviourally,
+    TC-42 structurally via the enriched schema's status enum -- but only the first is actually proven;
+    the contract-layer backstop for the suite's single most important guarantee does not hold.
+  likelihood: Low
+  impact: High
+  mitigation: Treat as open (see defects.csv, DEF-111). Strengthen the booking-enriched-v1 schema's status
+    constraint or the TC-42 assertion so a flagged payload genuinely fails enriched-schema validation,
+    then re-run mutation 3 and record the result in docs/MUTATION_CHECK.md before relying on TC-42 as
+    an independent mechanism again.
+- risk: 'The integration and nightly execution tiers depend on a single external credential (the SERVICE_SSH_KEY
+    read-only deploy key) to clone the private service repository. When that credential is absent the
+    pipeline is designed to skip the tier rather than fail it (commit 8d1df1b, "ci: skip the integration
+    jobs instead of failing them"), and the workflow has already shipped once with the wrong secret name
+    exported (commit fab2bee) and once with the credential simply not existing yet (commit c9cc044). A
+    revoked or misnamed credential produces a green run with silently reduced coverage, not a red one.'
+  likelihood: Medium
+  impact: Medium
+  mitigation: Alert on the unit job's has-secret output going false rather than trusting overall run colour;
+    treat a skipped integration/nightly tier as a release-blocking signal pending investigation, not as
+    "nothing to report".
+- risk: The confidence threshold (Jaro-Winkler floor, per-length-band edit-distance caps) has no named
+    business owner. TEST_SUITE_SPEC.md section 13.5 states the threshold "is fixed for the cycle; a retune
+    requires the boundary rows to be revisited" but does not name who is authorised to request that retune,
+    or what the cost of a wrong auto-correction is weighed against the cost of a false flag.
+  likelihood: Medium
+  impact: Medium
+  mitigation: Escalate to the product owner for a named threshold owner and a retune process. Until named,
+    any proposed threshold change is treated as blocked, since CLAUDE.md non-negotiable 2 already requires
+    the feature file and the threshold to move together with an explanation -- there is no one currently
+    authorised to supply it.
+- risk: Reference master data is eight canonical cities, several orders of magnitude below UN/LOCODE production
+    scale. TEST_SUITE_SPEC.md section 13.4 defers "matching performance at UN/LOCODE master data scale"
+    and docs/TEST_STRATEGY.md section 15 names the same gap ("eight cities is trivial; UN/LOCODE is roughly
+    110,000 entries. Both the matching strategy and the test approach change materially at that scale").
+    Neither the matcher's behaviour nor this suite's approach has been exercised anywhere near that scale.
+  likelihood: Low
+  impact: High
+  mitigation: Deferred per TEST_SUITE_SPEC.md section 13.4 -- not a defect against the current cycle's
+    scope. Revisit the matching strategy and the suite's data-generation approach together before reference
+    data moves beyond a demonstration list.
+- risk: Several suite-side defects in early development were only caught by actually running the harness
+    against a live service, not by review of the feature files or step definitions -- a doubled schema-version
+    suffix, a case-sensitive route match that hung for the full poll timeout, a setup step wrongly implemented
+    as an assertion, and a shared staging slot that silently dropped a scenario's malformed payload (commit
+    99342dd). None were caught by the suite's own unit tests, since none exist below the Cucumber layer
+    for step-definition wiring.
+  likelihood: Medium
+  impact: Medium
+  mitigation: The mutation check (risk 1 above) is the suite's designed defence against exactly this class
+    of "suite looks right, isn't checking what it claims" defect; keep it mandatory before release rather
+    than treating a first green run as sufficient evidence.

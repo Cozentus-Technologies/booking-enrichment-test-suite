@@ -1,0 +1,191 @@
+# spec/scope.yaml
+#
+# Feeds: section 3 (Scope of testing -- in scope, out of scope,
+# assumptions, dependencies) of the generated report, rendered from
+# `R.inScope` / `R.outScope` / `R.assumptions`.
+#
+# Why this cannot be derived from cucumber.json alone (TEST_SUITE_SPEC.md
+# section 8.6, Class B): scope is a statement of intent and boundary --
+# what the suite chooses to verify and, just as importantly, what it
+# deliberately does not -- not something inferable from which tests
+# happened to run. TEST_SUITE_SPEC.md section 13 states explicitly that
+# this content is "held as spec/scope.yaml and rendered into section 3 of
+# every generated report, so the boundary travels with the results rather
+# than living in a separate document nobody opens."
+#
+# in_scope is condensed from TEST_SUITE_SPEC.md section 13.1 (grouped by
+# the same five dimensions docs/traceability-matrix.md's feature files
+# map to: functional, routing, message contract, contract conformance,
+# resilience, volume, edge cases) and 13.2 (suite capabilities SC-01..07).
+# out_of_scope is TEST_SUITE_SPEC.md section 13.3 verbatim in substance:
+# every entry states both the reason and the mechanism that would bring it
+# into scope, as the source table does. assumptions is section 13.5.
+
+in_scope:
+  - title: City name correction against reference master data
+    detail: Exact match, casing and whitespace noise, fuzzy correction within the agreed
+      confidence threshold (substitution, transposition, deletion, doubling, truncation),
+      rejection beyond the threshold including boundary pairs either side of the cut-off,
+      token-level resolution of a partial token to a canonical multi-word name, and
+      ambiguity handling where near-equal candidates are rejected rather than arbitrarily
+      resolved. TEST_SUITE_SPEC.md section 13.1.
+
+  - title: Booking-level enrichment decision logic
+    detail: A booking is enriched only when both cities resolve; the failing field is named
+      and flag reasons are ordered deterministically; original values, corrected values and
+      match confidence are retained for audit; non-city fields and unrecognised additional
+      fields pass through unchanged. TEST_SUITE_SPEC.md section 13.1.
+
+  - title: Routing between the enriched and flagged topics
+    detail: Enriched and flagged bookings reach their respective topics; a booking is
+      confirmed absent from the other topic by bounded observation in both directions; every
+      booking lands on exactly one output topic. TEST_SUITE_SPEC.md section 13.1.
+
+  - title: Message contract on the output topics
+    detail: Message key is the booking id on every route; publisher-supplied headers
+      (including correlation identifiers) and service-stamped headers are correct for the
+      route taken; relative ordering is preserved for bookings sharing a key.
+      TEST_SUITE_SPEC.md section 13.1.
+
+  - title: Contract conformance of output messages
+    detail: Every enriched/flagged message validates against its own published JSON Schema;
+      a flagged message fails validation against the enriched schema, enforcing routing
+      exclusivity independently of the behavioural assertion; enrichment metadata conforms to
+      the agreed structure; a schema change against its previous version is verified
+      additive-only. TEST_SUITE_SPEC.md section 13.1.
+
+  - title: Resilience of the raw-topic consumer
+    detail: Malformed, empty and structurally wrong payloads are flagged rather than
+      dropped and do not halt the consumer; a valid message after a bad one is still
+      processed; a keyless malformed message uses the UNKNOWN fallback; duplicate delivery
+      under at-least-once semantics is handled correctly (not deduplicated).
+      TEST_SUITE_SPEC.md section 13.1.
+
+  - title: Correctness at volume
+    detail: One thousand mixed bookings reconciled against a deterministic oracle; per-topic
+      and per-reason totals match expectation; no booking appears on both output topics;
+      concurrent publishers lose no messages. Framed as correctness at scale, not a
+      throughput measurement (TEST_SUITE_SPEC.md sections 13.1 and 13.6).
+
+  - title: Data-handling edge cases
+    detail: Character encoding (diacritics, non-Latin script) preserved end to end; date
+      fields pass through byte-identical with no timezone shift, including invalid date
+      strings; oversized payloads behave predictably at the broker boundary.
+      TEST_SUITE_SPEC.md section 13.1.
+
+  - title: Suite capabilities (SC-01..SC-07)
+    detail: Tag-driven selective execution across type/module/priority/profile; custom
+      report generation (this report); AI-assisted scenario/data generation and gap
+      analysis with a committed review log; a mutation check mapping deliberate service
+      breakage to scenarios that must fail; evidence capture on every scenario; and
+      environment portability (embedded, CI, external) by configuration alone.
+      TEST_SUITE_SPEC.md section 13.2.
+
+out_of_scope:
+  - title: Unit tests of the matcher and enricher
+    detail: White box -- requires internal knowledge this suite deliberately does not have.
+      Owned by the development team. Mechanism if brought into scope is not applicable; this
+      is a permanent boundary of a black-box suite, not a gap. TEST_SUITE_SPEC.md section 13.3.
+
+  - title: Component integration and application context wiring
+    detail: White box, inside a single deployable. Owned by the development team.
+      TEST_SUITE_SPEC.md section 13.3.
+
+  - title: Code coverage measurement
+    detail: Cannot be produced from a black-box suite. Scenario coverage and requirement
+      coverage are reported instead (section 8.12). Mechanism if brought into scope is
+      JaCoCo, run by the development team against their own unit tests.
+      TEST_SUITE_SPEC.md section 13.3.
+
+  - title: Static analysis, linting, dependency scanning
+    detail: Build-pipeline concerns, not behavioural verification. Owned by the development
+      team's build pipeline. TEST_SUITE_SPEC.md section 13.3.
+
+  - title: Load and throughput measurement
+    detail: Needs a representative cluster and a purpose-built harness; figures from a
+      single-node broker would mislead. Mechanism if brought into scope is k6 or the JMeter
+      Kafka plugin against a dedicated environment. TEST_SUITE_SPEC.md section 13.3.
+
+  - title: Backpressure and consumer lag
+    detail: A capacity, partitioning and monitoring concern rather than a functional
+      assertion. Mechanism if brought into scope is lag monitoring, partition tuning and
+      max.poll.records calibration. TEST_SUITE_SPEC.md section 13.3.
+
+  - title: Broker and downstream failure injection
+    detail: Requires controlled network fault injection. Mechanism if brought into scope is
+      Toxiproxy with Testcontainers. TEST_SUITE_SPEC.md section 13.3.
+
+  - title: Sustained soak and endurance testing
+    detail: Requires a long-running environment and memory profiling. Mechanism if brought
+      into scope is a dedicated soak environment. TEST_SUITE_SPEC.md section 13.3.
+
+  - title: Consumer-driven contract testing
+    detail: Requires TMS to publish its own expectations; there is no consumer to drive the
+      contract from this side. Mechanism if brought into scope is a Pact broker with TMS
+      participation. TEST_SUITE_SPEC.md section 13.3.
+
+  - title: Schema registry integration
+    detail: No registry is deployed in the test environment. Mechanism if brought into scope
+      is Confluent Schema Registry with BACKWARD compatibility mode.
+      TEST_SUITE_SPEC.md section 13.3.
+
+  - title: End-to-end verification into TMS
+    detail: TMS is outside the boundary of this engagement. Mechanism if brought into scope
+      is a joint test environment and an agreed integration contract with the TMS team.
+      TEST_SUITE_SPEC.md section 13.3.
+
+  - title: Exactly-once delivery and deduplication
+    detail: The service is at-least-once by design; a duplicate on the output topic is
+      correct behaviour, not a defect (asserted directly by TC-53). Deduplication is a
+      downstream concern, with no suite-side mechanism intended.
+      TEST_SUITE_SPEC.md section 13.3.
+
+  - title: Retry and dead-letter policy beyond the flagged route
+    detail: No retry policy is defined in the current specification. Mechanism if brought
+      into scope would follow from a service-side retry/DLQ design not yet written.
+      TEST_SUITE_SPEC.md section 13.3.
+
+  - title: Security testing -- TLS, broker authentication, authorisation, ACLs
+    detail: Deployment configuration rather than service behaviour. Owned by the platform
+      team. TEST_SUITE_SPEC.md section 13.3.
+
+  - title: Infrastructure provisioning, deployment verification, disaster recovery
+    detail: Platform-team responsibility, requiring a multi-broker estate for the DR case.
+      TEST_SUITE_SPEC.md section 13.3.
+
+  - title: Observability configuration -- metrics, dashboards, alerting
+    detail: Operations responsibility, though the suite asserts the trace headers those
+      tools depend on (TC-37, TC-38). TEST_SUITE_SPEC.md section 13.3.
+
+  - title: User interface, accessibility, cross-browser, localisation, migration testing
+    detail: Not applicable -- no user interface or presentation layer exists in this
+      pipeline, and there is no prior production version to migrate from.
+      TEST_SUITE_SPEC.md section 13.3.
+
+assumptions:
+  - title: Reference master data is stable for the cycle
+    detail: The eight canonical city names do not change during the cycle. A change
+      invalidates the expected-result table in testdata/city-cases.csv.
+      TEST_SUITE_SPEC.md section 13.5.
+
+  - title: The service under test is the only active consumer of booking.raw
+    detail: No competing consumer group is active in the test environment during a run.
+      TEST_SUITE_SPEC.md section 13.5.
+
+  - title: The published JSON schemas represent the TMS contract
+    detail: In the absence of a contract supplied by the TMS team, contracts/booking-*-v1.schema.json
+      stand in for it. TEST_SUITE_SPEC.md section 13.5.
+
+  - title: Defect fixes are verified by re-execution, not inspection
+    detail: A closed defect is verified by re-running the originating test case in the next
+      cycle, not by reading the fix. TEST_SUITE_SPEC.md section 13.5.
+
+  - title: The confidence threshold is fixed for the cycle
+    detail: A retune requires the boundary rows in testdata/city-cases.csv to be revisited
+      deliberately, in the same change as any threshold move (CLAUDE.md non-negotiable 2).
+      TEST_SUITE_SPEC.md section 13.5.
+
+  - title: Topic names, broker endpoint and reference data source are configurable at startup
+    detail: Environment portability (SC-07) depends on this holding; if it stops holding,
+      "point at a different environment" is no longer a config-file-only change.
+      TEST_SUITE_SPEC.md section 13.5.
