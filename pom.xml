@@ -220,6 +220,14 @@
           <!-- Tests needing a broker are opt-in, so the pure-logic tests of the
                suite's own helpers stay runnable with no Docker. -->
           <excludedGroups>kafka</excludedGroups>
+          <!-- RunCucumberTest needs a broker AND a running service; it carries no
+               JUnit tag to exclude it by, so it is excluded by name. Without this
+               `mvn test` passes on a developer machine that happens to have a
+               broker up and fails on a CI runner that does not, which is the
+               worst of both. -->
+          <excludes>
+            <exclude>**/RunCucumberTest.java</exclude>
+          </excludes>
           <systemPropertyVariables>
             <suite.env>${suite.env}</suite.env>
             <bulk.count>${bulk.count}</bulk.count>
@@ -242,6 +250,7 @@
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
               <excludedGroups combine.self="override"></excludedGroups>
+              <excludes combine.self="override"></excludes>
             </configuration>
           </plugin>
         </plugins>

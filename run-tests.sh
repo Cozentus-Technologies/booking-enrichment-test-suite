@@ -36,19 +36,19 @@ PROFILE="$1"
 
 case "$PROFILE" in
   smoke)
-    mvn test -Dcucumber.filter.tags="@smoke"
+    mvn test -Pkafka -Dcucumber.filter.tags="@smoke"
     ;;
   functional)
-    mvn test -Dcucumber.filter.tags="@functional and @critical"
+    mvn test -Pkafka -Dcucumber.filter.tags="@functional and @critical"
     ;;
   contract)
-    mvn test -Dcucumber.filter.tags="@contract"
+    mvn test -Pkafka -Dcucumber.filter.tags="@contract"
     ;;
   full)
-    mvn test -Dcucumber.filter.tags="not @nightly"
+    mvn test -Pkafka -Dcucumber.filter.tags="not @nightly"
     ;;
   nightly)
-    mvn test -Pnightly -Dcucumber.filter.tags="@nightly"
+    mvn test -Pkafka -Pnightly -Dcucumber.filter.tags="@nightly"
     ;;
   *)
     echo "Unknown profile: '$PROFILE'" >&2
