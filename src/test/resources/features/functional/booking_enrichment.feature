@@ -20,6 +20,8 @@ Feature: Booking-level enrichment behaviour
     Then it lands on the flagged topic
     And the reason concerns the destination field
     And the reason is "UNMATCHED_DESTINATION_CITY"
+    And the flagged original is carried as a booking object
+    And the flagged original equals the payload published
 
   @functional @flagging @high @fast @TC-23
   Scenario: Both cities fail, producing two reasons ordered origin then destination
@@ -27,6 +29,8 @@ Feature: Booking-level enrichment behaviour
     When it is published to the raw topic
     Then it lands on the flagged topic
     And the reasons are "UNMATCHED_ORIGIN_CITY" and "UNMATCHED_DESTINATION_CITY", in that order
+    And the flagged original is carried as a booking object
+    And the flagged original equals the payload published
 
   @functional @flagging @critical @fast @TC-24
   Scenario: A valid city does not rescue a booking that has one invalid city
@@ -95,6 +99,8 @@ Feature: Booking-level enrichment behaviour
     And the reason concerns the origin field
     And the reason is "AMBIGUOUS_ORIGIN_CITY"
     And the candidates are "New Delhi" and "Delhi", in reference order
+    And the flagged original is carried as a booking object
+    And the flagged original equals the payload published
 
   @functional @city-correction @flagging @high @slow @regression @TC-47
   Scenario: Both fields ambiguous produces both reasons, origin then destination

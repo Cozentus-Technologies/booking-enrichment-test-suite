@@ -26,6 +26,26 @@ public record FlaggedView(ConsumedMessage message, JsonNode payload) {
         return List.copyOf(fields);
     }
 
+    /**
+     * B-6. The payload as it arrived, carried through so a reviewer can see what
+     * was actually sent rather than a reconstruction of it.
+     *
+     * <p>The contract allows two shapes here and the difference matters: an
+     * object when the message parsed and was rejected on its content, a string
+     * when it never parsed at all. Nothing asserted the string branch before
+     * TC-50 was extended, so a service that dropped the raw text of a message it
+     * could not parse - the only record of what went wrong - would have passed.
+     */
+    public JsonNode original() {
+        return payload.path("original");
+    }
+
+    /** The original as text, whichever of the two shapes the contract used. */
+    public String originalText() {
+        JsonNode node = original();
+        return node.isTextual() ? node.asText() : node.toString();
+    }
+
     /** The value as it arrived, which an encoding test asserts is byte-identical. */
     public String valueOf(String field) {
         for (JsonNode node : payload.path("fields")) {

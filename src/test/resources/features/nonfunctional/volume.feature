@@ -11,6 +11,11 @@ Feature: Correctness at scale
     Then <valid> bookings arrive on the enriched topic
     And <invalid> bookings arrive on the flagged topic
     And no booking is lost
+    # B-8: totals alone cannot catch a swap. Route one enriched booking to the
+    # flagged topic and one flagged booking to the enriched topic and every
+    # count above still matches. These two compare identities, not sizes.
+    And each booking lands on the topic its data says it should
+    And every booking appears exactly once across the two output topics
 
     Examples:
       | total | invalid | valid |

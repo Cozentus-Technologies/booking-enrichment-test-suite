@@ -10,6 +10,13 @@ Feature: Resilience of the raw-topic consumer to bad input
     When it is published to the raw topic
     Then it lands on the flagged topic
     And the reason is "MALFORMED_MESSAGE"
+    # B-6: the reason alone would pass for a message carrying a fabricated
+    # booking id, an invented field list, or no record of what actually arrived.
+    And the flagged booking id is null
+    And the flagged fields list is empty
+    And the flagged original is carried as raw text
+    And the flagged original equals the payload published
+    And the message validates against the "booking-flagged-v1" schema
 
   @resilience @flagging @critical @fast @TC-51
   Scenario: A valid booking published after a malformed one is still processed
