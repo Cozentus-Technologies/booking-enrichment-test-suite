@@ -32,7 +32,7 @@ on:
 env:
   SERVICE_REPO: DSV-test-assignement
   SERVICE_REF: main
-  SERVICE_TOKEN: ${{ secrets.SERVICE_TOKEN }}
+  SERVICE_SSH_KEY: ${{ secrets.SERVICE_SSH_KEY }}
 
 jobs:
   unit:
