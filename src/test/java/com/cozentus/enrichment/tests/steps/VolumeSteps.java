@@ -165,41 +165,145 @@ public class VolumeSteps {
         }
 
         JsonNode byReason = oracle.path("totals").path("byReason");
-        byReason.fieldNames().forEachRemaining(reason ->
-                assertThat(actual.getOrDefault(reason, 0))
-                        .as("count of %s", reason)
-                        .isEqualTo(byReason.path(reason).asInt()));
+
+        // B-8. Iterating the oracle's keys alone checks only the reasons the
+        // oracle happens to mention: a reason the service emitted and the oracle
+        // never expected is simply not looked at. The union of the oracle's keys
+        // and the reasons the contract permits is what has to be checked, with an
+        // absent oracle key meaning zero rather than meaning "skip".
+        Set<String> permitted = com.cozentus.enrichment.tests.support.ReasonCoverage
+                .reasonsInContract();
+        Set<String> toCheck = new java.util.TreeSet<>(permitted);
+        byReason.fieldNames().forEachRemaining(toCheck::add);
+
+        assertThat(actual.keySet())
+                .as("the service emitted a reason the contract does not permit")
+                .isSubsetOf(permitted);
+
+        for (String reason : toCheck) {
+            assertThat(actual.getOrDefault(reason, 0))
+                    .as("count of %s", reason)
+                    .isEqualTo(byReason.path(reason).asInt());
+        }
     }
 
     @Then("no booking id present on the enriched topic also appears on the flagged topic")
     public void noBookingIdOnBothTopics() {
-        awaitTotal(sampleRows.isEmpty() ? generated.size() : sampleRows.size());
+        awaitTotal(totalExpected());
 
         Set<String> enriched = keys(context.harness().enrichedTopic());
         Set<String> flagged = keys(context.harness().flaggedTopic());
 
+        // B-7: with the poll result now asserted, these sets are known to be
+        // populated. Stated anyway, because a disjointness check over two empty
+        // sets is exactly the failure this scenario used to hide.
+        assertThat(enriched.size() + flagged.size())
+                .as("both key sets must be populated before disjointness means anything")
+                .isEqualTo(totalExpected());
         assertThat(enriched)
                 .as("a bookingId must never appear on both output topics")
                 .doesNotContainAnyElementsOf(flagged);
     }
 
-    // --- helpers --------------------------------------------------------
+    /**
+     * B-8. The generator already knows which rows must flag, and nothing read it.
+     * Totals alone cannot catch a swap: route one enriched booking to the flagged
+     * topic and one flagged booking to the enriched topic and every count still
+     * matches. Comparing the identities does catch it.
+     */
+    @Then("each booking lands on the topic its data says it should")
+    public void routingMatchesTheGeneratedExpectation() {
+        awaitTotal(totalExpected());
 
-    private void awaitCount(String topic, int expected, String label) {
-        boolean reached = PollUntil.isTrue(
-                () -> observed(topic).size() >= expected, context.config().volumeTimeout());
+        Set<String> expectedFlagged = generated.stream()
+                .filter(VolumeDataGenerator.Row::expectedFlagged)
+                .map(VolumeDataGenerator.Row::bookingId)
+                .collect(java.util.stream.Collectors.toSet());
 
-        assertThat(reached)
-                .as("expected %d %s messages, saw %d after %s",
-                        expected, label, observed(topic).size(), context.config().volumeTimeout())
-                .isTrue();
-        assertThat(observed(topic)).as("%s count", label).hasSize(expected);
+        assertThat(keys(context.harness().flaggedTopic()))
+                .as("the set of flagged bookings must be exactly the set the data says "
+                        + "cannot be matched, not merely the same size")
+                .isEqualTo(expectedFlagged);
     }
 
+    /** B-8. Exactly once across the two topics: neither lost nor duplicated. */
+    @Then("every booking appears exactly once across the two output topics")
+    public void everyBookingAppearsExactlyOnce() {
+        awaitTotal(totalExpected());
+
+        Map<String, Integer> occurrences = new java.util.LinkedHashMap<>();
+        for (String topic : List.of(context.harness().enrichedTopic(),
+                context.harness().flaggedTopic())) {
+            observed(topic).forEach(message -> occurrences.merge(message.key(), 1, Integer::sum));
+        }
+
+        Set<String> expected = generated.isEmpty()
+                ? sampleRows.stream().map(VolumeSteps::bookingIdOf)
+                        .collect(java.util.stream.Collectors.toSet())
+                : generated.stream().map(VolumeDataGenerator.Row::bookingId)
+                        .collect(java.util.stream.Collectors.toSet());
+
+        assertThat(occurrences.keySet())
+                .as("every booking published must be accounted for, and no others")
+                .isEqualTo(expected);
+        assertThat(occurrences.entrySet().stream()
+                .filter(entry -> entry.getValue() != 1)
+                .toList())
+                .as("a booking seen twice is a duplicate, not a success")
+                .isEmpty();
+    }
+
+    // --- helpers --------------------------------------------------------
+
+    /**
+     * B-8. Waits for the combined total rather than one topic's share of it.
+     *
+     * <p>Waiting per topic burns the whole volume timeout whenever the split is
+     * wrong: if the service routes an enriched booking to the flagged topic, the
+     * enriched count never reaches its target, so the run sits for the full two
+     * minutes before failing, and it fails saying only that one topic was short.
+     * The combined total is reached as soon as processing finishes however the
+     * messages were routed, so a misrouting is reported in seconds with both
+     * counts in the message.
+     */
+    private void awaitCount(String topic, int expected, String label) {
+        awaitTotal(totalExpected());
+
+        assertThat(observed(topic))
+                .as("%s count. enriched=%d, flagged=%d, %d expected in total",
+                        label, observed(context.harness().enrichedTopic()).size(),
+                        observed(context.harness().flaggedTopic()).size(), totalExpected())
+                .hasSize(expected);
+    }
+
+    /**
+     * B-7. The result of the poll is asserted, not discarded.
+     *
+     * <p>Discarding it meant every caller carried on with whatever had arrived so
+     * far - usually nothing. TC-63 then compared two empty key sets and passed:
+     * a suite that would have reported "no booking id appears on both topics"
+     * against a service that had produced no output at all.
+     */
     private void awaitTotal(int expected) {
-        PollUntil.isTrue(() -> observed(context.harness().enrichedTopic()).size()
-                        + observed(context.harness().flaggedTopic()).size() >= expected,
-                context.config().volumeTimeout());
+        boolean reached = PollUntil.isTrue(
+                () -> totalObserved() >= expected, context.config().volumeTimeout());
+
+        assertThat(reached)
+                .as("only %d of %d bookings arrived within %s (enriched=%d, flagged=%d)",
+                        totalObserved(), expected, context.config().volumeTimeout(),
+                        observed(context.harness().enrichedTopic()).size(),
+                        observed(context.harness().flaggedTopic()).size())
+                .isTrue();
+    }
+
+    private int totalObserved() {
+        return observed(context.harness().enrichedTopic()).size()
+                + observed(context.harness().flaggedTopic()).size();
+    }
+
+    /** However the data set was produced, this is how many bookings it holds. */
+    private int totalExpected() {
+        return generated.isEmpty() ? sampleRows.size() : generated.size();
     }
 
     private List<ConsumedMessage> observed(String topic) {
