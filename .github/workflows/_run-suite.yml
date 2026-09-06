@@ -86,7 +86,12 @@ jobs:
         run: |
           if [ "${{ inputs.profile }}" = "tags" ]; then
             echo "Running tag expression: ${{ inputs.tags }}"
-            mvn -B test -Pkafka -Dcucumber.filter.tags="${{ inputs.tags }}"
+            # -Dsuite.env matters: run-tests.sh passes it, so a raw mvn command
+            # that omits it silently falls back to the local profile and looks
+            # for the broker at the wrong address.
+            mvn -B test -Pkafka \
+              -Dsuite.env="${{ inputs.suite_env }}" \
+              -Dcucumber.filter.tags="${{ inputs.tags }}"
           else
             echo "Running profile: ${{ inputs.profile }}"
             ./run-tests.sh "${{ inputs.profile }}"
