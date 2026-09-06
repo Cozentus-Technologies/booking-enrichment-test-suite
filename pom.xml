@@ -228,6 +228,20 @@
             </configuration>
           </execution>
           <execution>
+            <!-- D-4: spec/test-cases.yaml is the denominator of every "planned"
+                 figure in the report. It drifted thirty-seven cases behind the
+                 features and nothing failed, which made execution completeness
+                 read 100% by construction. Declared after the feature generator,
+                 since a quarter of the catalogue lives in the generated file. -->
+            <id>guard-planned-set</id>
+            <phase>process-test-classes</phase>
+            <goals><goal>java</goal></goals>
+            <configuration>
+              <classpathScope>test</classpathScope>
+              <mainClass>com.cozentus.enrichment.tests.report.PlannedSetGuard</mainClass>
+            </configuration>
+          </execution>
+          <execution>
             <!-- F-2: the committed traceability matrix claimed to have been derived
                  by scanning the feature files and was thirty-seven cases behind
                  them, with nothing to say so. It is generated now, and this fails
