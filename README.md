@@ -43,35 +43,38 @@ read from a constant.
 
 ## Environments
 
-| Profile | Broker | Service | Use |
-|---|---|---|---|
-| `local` | `docker-compose.override.yml` | started by the developer | Developer machine |
-| `ci` | docker-compose in the pipeline | started by the pipeline | Every commit |
-| `external` | supplied endpoint | already running | Against a real deployment |
+| Profile | Broker | Service | Topics | Use |
+|---|---|---|---|---|
+| `local` | `docker-compose.override.yml` | **started by the suite**, one instance per scenario | created and deleted per scenario | Developer machine |
+| `ci` | docker-compose in the pipeline | **started by the suite**, one instance per scenario | created and deleted per scenario | Every commit |
+| `external` | supplied endpoint | **started by someone else**, already running | the deployment's own, used verbatim | Against a real deployment |
 
 Switching environments is a matter of which `config/test-*.properties` file
 is active (`-Dsuite.env=<name>`, defaulting to `local`) — see
-`docs/MAINTENANCE.md`. `external` is the point of the design: three
-configuration values (broker, topics, readiness URL) and the suite runs
-against a service someone else deployed, no source change required.
+`docs/MAINTENANCE.md`.
 
 **What each profile assumes:**
 
-- `local` — Kafka and the service are both started and owned by this run;
-  topics are provisioned per scenario and deleted afterwards, so scenarios
-  are fully isolated from each other and from any other run.
-- `ci` — same isolation guarantee as `local`; only host names and the
-  pipeline's own startup steps differ. Timeouts stay identical to `local`
-  on purpose (`test-ci.properties`) — a busier runner is a pipeline problem,
-  not a reason to widen a contract timeout.
-- `external` — broker and service are already running and assumed ready;
-  `service.jar.path` is unused. Topic values name the deployment's real,
-  fixed topics rather than a per-scenario prefix, so **scenario isolation
-  by unique topic is unavailable** — scenarios correlate purely by
-  `bookingId` and must tolerate other traffic on those topics. Timeouts are
-  widened relative to `local` to allow for a genuinely slower remote
-  broker. See `config/test-external.properties` for the full reasoning
-  per key.
+- `local` — Kafka is started by `docker-compose.override.yml`; the *suite*
+  starts the service, one instance per scenario, from `service.jar.path`, on
+  an ephemeral port of its own choosing. Topics are provisioned per scenario
+  and deleted afterwards, so scenarios are fully isolated from each other and
+  from any other run. Nothing but the broker has to be running before
+  `mvn test`.
+- `ci` — same as `local`, the suite starting the service included. The
+  pipeline's job is to clone and build the service, not to run it. Timeouts
+  stay identical to `local` on purpose (`test-ci.properties`) — a busier
+  runner is a pipeline problem, not a reason to widen a contract timeout.
+- `external` — the suite starts nothing and creates nothing. It reads no
+  `service.jar.path` (the key is not in `test-external.properties`), polls
+  the configured readiness URL, uses the configured topic names verbatim, and
+  neither creates nor deletes a topic. **Scenario isolation by unique topic is
+  unavailable**, so the suite prefixes every booking id it publishes with
+  `RUN-<uuid8>-`, seeks its consumers to the end of each topic on assignment
+  so a long-lived topic's history is not replayed, and ignores anything not
+  carrying this run's prefix. An absence assertion is weaker evidence here
+  than on `local`: it is a bounded observation on a topic this run does not
+  own.
 
 Select a profile with one flag or one environment variable:
 
@@ -80,9 +83,64 @@ mvn test -Dsuite.env=external -Dcucumber.filter.tags="@smoke"
 SUITE_ENV=external ./run-tests.sh smoke
 ```
 
+### External profile configuration
+
+Every value the `external` profile reads, and nothing else. Defaults come from
+`src/test/resources/config/test-external.properties`; a system property of the
+same name beats the file, so a single run can be pointed elsewhere without an
+edit (`-Dkafka.bootstrap.servers=…`).
+
+| Key | Default | Required | What it is |
+|---|---|---|---|
+| `kafka.bootstrap.servers` | `external-broker.example.com:9092` | **yes** | The deployment's broker. The default is a placeholder, not a working value. |
+| `topic.raw.prefix` | `booking.raw` | **yes** | The deployment's raw topic, used **verbatim** — no `.<scenarioId>` suffix on this profile. |
+| `topic.enriched.prefix` | `booking.enriched` | **yes** | The deployment's enriched topic, verbatim. |
+| `topic.flagged.prefix` | `booking.flagged` | **yes** | The deployment's flagged topic, verbatim. |
+| `service.readiness.url` | `http://external-service.example.com:8081/ready` | **yes** | Polled before any scenario publishes. Placeholder default. |
+| `consumer.group.prefix` | `city-enrichment-suite-external` | no | The suite's own identity on the broker; a per-scenario suffix is appended. |
+| `await.timeout.seconds` | `30` | no | Bounded poll for a message to appear on an output topic. |
+| `absence.window.seconds` | `15` | no | How long an absence claim observes for. |
+| `readiness.timeout.seconds` | `60` | no | How long readiness is polled before the run gives up. |
+| `volume.timeout.seconds` | `300` | no | Ceiling for a volume run to drain both output topics. |
+| `sample.data.path` | `../DSV-test-assignement/data/bookings-sample.jsonl` | volume runs only | Fixture data, read from the local checkout rather than from the deployment. |
+| `sample.oracle.path` | `../DSV-test-assignement/data/bookings-sample.jsonl.expected.json` | volume runs only | The oracle for the above. |
+
+`service.jar.path` is **absent from this profile on purpose** and is never
+read. Its absence is what makes "the suite starts nothing" checkable rather
+than promised: a code path that reached for it would otherwise succeed quietly
+against whatever jar happened to be on the machine, and the suite would end up
+reporting on a process it started instead of on the deployment.
+
+Check the environment before running anything against it:
+
+```bash
+SUITE_ENV=external ./run-tests.sh preflight
+```
+
+It prints broker reachability, whether the three configured topics exist and
+whether readiness answers 200 — each with the value it used — and exits
+non-zero if any of them is missing. Without it a missing topic shows up as
+scenario after scenario timing out on a message that was never going to
+arrive, which reads as a service defect.
+
+### Excluded by environment
+
+Four scenarios — `TC-29`, `TC-46`, `TC-47`, `TC-48` — need the service started
+against an extended reference city list, because ambiguity only exists when
+two candidates are equally valid. A black-box suite can only arrange that by
+starting the service itself, so they carry `@requires-service-config` and are
+excluded under `external`.
+
+They are reported as **excluded by environment**, which is not the same as
+*not selected by the tag filter*: they were selected, they could not be run
+here, and they did not fail. Cucumber reports them as skipped, the run prints
+a summary naming each, and the same summary is written to
+`target/environment-exclusions.txt`. Run them under `-Dsuite.env=local`.
+
 ## Running the suite
 
 ```bash
+./run-tests.sh preflight    # no scenarios              — broker, topics, readiness
 ./run-tests.sh smoke        # @smoke                    — under 60s
 ./run-tests.sh functional   # @functional and @critical  — under 2 minutes
 ./run-tests.sh contract     # @contract                  — schema + compatibility
@@ -168,8 +226,10 @@ written twice. Three CSV conventions worth knowing before editing it:
 
 Every scenario carries one tag from `@functional`/`@contract`/
 `@resilience`/`@volume`/`@smoke`/`@regression`, one priority tag, at least
-one feature-area tag, and exactly one `@TC-nn` traceability tag. Full rules
-and enforcement in `docs/TAGGING_GUIDELINE.md`.
+one feature-area tag, and exactly one `@TC-nn` traceability tag. A scenario
+may also carry one *environment* tag — today only `@requires-service-config`,
+see "Excluded by environment" above. Full rules and enforcement in
+`docs/TAGGING_GUIDELINE.md`.
 
 ## Repository layout
 
