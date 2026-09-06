@@ -1,10 +1,10 @@
 "caseId","input","expected","outcome","reason","tags","note"
-TC-01,Mumbai,Mumbai,ENRICHED,,@functional @critical @city-correction @fast @TC-01,"Exact match, canonical casing already correct. Baseline happy path."
+TC-01,Mumbai,Mumbai,ENRICHED,,@functional @critical @city-correction @fast @smoke @TC-01,"Exact match, canonical casing already correct. Baseline happy path."
 TC-02,MUMBAI,Mumbai,ENRICHED,,@functional @critical @city-correction @fast @TC-02,"Exact match after case-fold. Proves canonical casing is applied on output, not just accepted on input."
 TC-03,mumbai,Mumbai,ENRICHED,,@functional @critical @city-correction @fast @TC-03,"Exact match after case-fold, lower case. Companion to TC-02 from the other casing direction."
 TC-04,"  Mumbai  ",Mumbai,ENRICHED,,@functional @high @city-correction @fast @TC-04,Leading and trailing whitespace trimmed before comparison.
 TC-05,New   Delhi,New Delhi,ENRICHED,,@functional @high @city-correction @fast @TC-05,Internal whitespace collapsed to a single space before comparison.
-TC-06,Mumbi,Mumbai,ENRICHED,,@functional @critical @city-correction @fast @TC-06,"Typo within tolerance, edit distance 1 against a name of length > 6. Left half of the TC-06/TC-14 boundary pair proving the distance cap is a real decision, not an accident of the algorithm."
+TC-06,Mumbi,Mumbai,ENRICHED,,@functional @critical @city-correction @fast @smoke @TC-06,"Typo within tolerance, edit distance 1 against a name of length > 6. Left half of the TC-06/TC-14 boundary pair proving the distance cap is a real decision, not an accident of the algorithm."
 TC-07,now delhi,New Delhi,ENRICHED,,@functional @critical @city-correction @fast @TC-07,"Typo plus casing, corrected via the token 'delhi' at distance 1; exercises whitespace normalisation together with fuzzy matching in the same case."
 TC-08,Bangalor,Bangalore,ENRICHED,,@functional @critical @city-correction @fast @TC-08,"Typo within tolerance, single trailing character dropped, edit distance 1."
 TC-09,kolkatta,Kolkata,ENRICHED,,@functional @high @city-correction @fast @TC-09,"Typo within tolerance, doubled letter, edit distance 1 — a common phonetic-style misspelling variant."

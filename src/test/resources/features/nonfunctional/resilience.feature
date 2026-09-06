@@ -4,7 +4,7 @@ Feature: Resilience of the raw-topic consumer to bad input
   rather than dropped or left to crash the consumer, and a bad message never stops the next
   good one from being processed.
 
-  @resilience @flagging @critical @fast @TC-50
+  @resilience @flagging @critical @fast @smoke @TC-50
   Scenario: A malformed payload is flagged as MALFORMED_MESSAGE
     Given a payload that is not valid JSON
     When it is published to the raw topic

@@ -4,13 +4,13 @@ Feature: Routing between the enriched and flagged topics
   never both, and never neither. The negative assertions here (TC-32, TC-33) are as
   important as the positive ones.
 
-  @functional @routing @critical @fast @TC-30
+  @functional @routing @critical @fast @smoke @TC-30
   Scenario: An enriched booking reaches the enriched topic
     Given a booking with origin "Mumbai" and destination "New Delhi"
     When it is published to the raw topic
     Then it lands on the enriched topic
 
-  @functional @routing @flagging @critical @fast @TC-31
+  @functional @routing @flagging @critical @fast @smoke @TC-31
   Scenario: A flagged booking reaches the flagged topic
     Given a booking with origin "Warsaw" and destination "New Delhi"
     When it is published to the raw topic

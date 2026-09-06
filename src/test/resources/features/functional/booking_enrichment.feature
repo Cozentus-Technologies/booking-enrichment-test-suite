@@ -5,7 +5,7 @@ Feature: Booking-level enrichment behaviour
   what the enrichment metadata carries, and that fields unrelated to city matching are
   left alone.
 
-  @functional @city-correction @critical @fast @TC-21
+  @functional @city-correction @critical @fast @smoke @TC-21
   Scenario: Both cities resolve, so the booking is enriched with both corrected
     Given a booking with origin "Mumbi" and destination "now delhi"
     When it is published to the raw topic
@@ -13,7 +13,7 @@ Feature: Booking-level enrichment behaviour
     And its origin is "Mumbai"
     And its destination is "New Delhi"
 
-  @functional @flagging @critical @fast @TC-22
+  @functional @flagging @critical @fast @smoke @TC-22
   Scenario: Origin resolves but destination fails, so the booking is flagged naming the destination
     Given a booking with origin "Mumbai" and destination "Warsaw"
     When it is published to the raw topic

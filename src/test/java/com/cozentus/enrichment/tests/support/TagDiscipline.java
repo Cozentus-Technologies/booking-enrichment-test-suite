@@ -26,8 +26,21 @@ import java.util.stream.Stream;
  */
 public final class TagDiscipline {
 
+    /**
+     * A-3. @smoke and @regression were in the type axis, which requires exactly
+     * one tag. Every scenario already carries @functional, @contract, @resilience
+     * or @volume, so neither could ever be added and the smoke profile selected
+     * nothing while six documents promised it did.
+     *
+     * They describe when a scenario runs, not what kind of test it is, so they
+     * belong on the selection axis alongside @fast, @slow and @nightly.
+     */
     private static final Set<String> TYPES = Set.of(
-            "@functional", "@contract", "@resilience", "@volume", "@smoke", "@regression");
+            "@functional", "@contract", "@resilience", "@volume");
+
+    /** Selection axis: optional, and a scenario may carry more than one. */
+    private static final Set<String> SELECTION = Set.of(
+            "@fast", "@slow", "@nightly", "@smoke", "@regression", "@quarantine");
     private static final Set<String> PRIORITIES = Set.of(
             "@critical", "@high", "@medium", "@low");
     private static final Set<String> AREAS = Set.of(
