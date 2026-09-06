@@ -6,6 +6,7 @@ import com.cozentus.enrichment.tests.support.TestConfig;
 import java.time.Duration;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -30,9 +31,19 @@ class HarnessSelfVerificationTest {
     private KafkaServiceHarness harness;
     private Duration window;
 
+    /**
+     * E-1. These publish straight onto the output topics to prove the harness's
+     * negative assertion can fail. That is fine on a topic the suite created for
+     * the test and unacceptable against a deployment it did not: it would be
+     * writing fabricated enriched messages onto somebody's real
+     * booking.enriched. Skipped there rather than made harmless, because a
+     * harness self-test that avoids touching the harness proves nothing.
+     */
     @BeforeEach
     void setUp() {
         config = TestConfig.load();
+        Assumptions.assumeFalse(config.isExternal(),
+                "publishes directly onto the output topics; only safe where the suite owns them");
         harness = new KafkaServiceHarness(config, TopicProvisioner.newScenarioId());
         window = Duration.ofSeconds(3);
     }

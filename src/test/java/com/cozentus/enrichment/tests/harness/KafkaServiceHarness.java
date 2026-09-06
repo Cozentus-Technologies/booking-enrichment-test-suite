@@ -25,15 +25,23 @@ import org.apache.kafka.common.serialization.ByteArraySerializer;
 /**
  * The Kafka implementation of {@link ServiceHarness}.
  *
- * <p>Owns a unique set of topics and a unique consumer group for the scenario,
- * provisioned on construction and removed on close, so scenarios are independent
- * and individually runnable.
+ * <p>On a profile that owns its broker it provisions a unique set of topics and
+ * a unique consumer group for the scenario on construction and removes the
+ * topics on close, so scenarios are independent and individually runnable.
+ *
+ * <p>E-1: against a deployment the suite did not provision it has none of that
+ * authority. The configured topic names are the deployment's own and are used
+ * verbatim, nothing is created and nothing is deleted, consumers start at the
+ * end of topics that already carry history, and isolation comes from
+ * {@link RunScope} - a booking-id namespace unique to the run - instead of from
+ * owning the channel.
  */
 public final class KafkaServiceHarness implements ServiceHarness {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final TestConfig config;
+    private final RunScope scope;
     private final TopicProvisioner provisioner;
     private final KafkaProducer<String, byte[]> producer;
     private final String rawTopic;
@@ -45,25 +53,50 @@ public final class KafkaServiceHarness implements ServiceHarness {
 
     public KafkaServiceHarness(TestConfig config, String scenarioId) {
         this.config = config;
-        this.rawTopic = config.rawTopicPrefix() + "." + scenarioId;
-        this.enrichedTopic = config.enrichedTopicPrefix() + "." + scenarioId;
-        this.flaggedTopic = config.flaggedTopicPrefix() + "." + scenarioId;
+        this.scope = RunScope.forEnvironment(config);
 
-        this.provisioner = new TopicProvisioner(config.bootstrapServers());
-        provisioner.create(List.of(rawTopic, enrichedTopic, flaggedTopic));
+        boolean ownsTopics = !config.isExternal();
+        this.rawTopic = topic(config.rawTopicPrefix(), scenarioId, ownsTopics);
+        this.enrichedTopic = topic(config.enrichedTopicPrefix(), scenarioId, ownsTopics);
+        this.flaggedTopic = topic(config.flaggedTopicPrefix(), scenarioId, ownsTopics);
+
+        if (ownsTopics) {
+            this.provisioner = new TopicProvisioner(config.bootstrapServers());
+            provisioner.create(List.of(rawTopic, enrichedTopic, flaggedTopic));
+        } else {
+            // No admin client at all, rather than one that is asked for nothing:
+            // creating or deleting a topic on someone else's broker is the
+            // failure this profile exists to avoid, and an idle Admin sitting
+            // here is a way back into it.
+            this.provisioner = null;
+        }
 
         this.producer = new KafkaProducer<>(producerProperties(config.bootstrapServers()));
 
         // Subscribed before the scenario publishes anything, and waited on until
         // partitions are actually assigned.
         String group = config.consumerGroupPrefix() + "." + scenarioId;
-        this.enrichedCollector = collector(group + ".enriched", enrichedTopic);
-        this.flaggedCollector = collector(group + ".flagged", flaggedTopic);
+        MessageCollector.StartPosition start = ownsTopics
+                ? MessageCollector.StartPosition.EARLIEST
+                : MessageCollector.StartPosition.END;
+        this.enrichedCollector = collector(group + ".enriched", enrichedTopic, start);
+        this.flaggedCollector = collector(group + ".flagged", flaggedTopic, start);
     }
 
-    private MessageCollector collector(String group, String topic) {
+    /**
+     * The scenario suffix is what makes a topic this scenario's own. A
+     * deployment the suite did not provision is already bound to fixed names it
+     * did not get from the suite, so appending anything there names a topic that
+     * does not exist and that nothing is listening to.
+     */
+    private static String topic(String configured, String scenarioId, boolean ownsTopics) {
+        return ownsTopics ? configured + "." + scenarioId : configured;
+    }
+
+    private MessageCollector collector(String group, String topic,
+                                       MessageCollector.StartPosition start) {
         MessageCollector collector =
-                new MessageCollector(config.bootstrapServers(), group, topic);
+                new MessageCollector(config.bootstrapServers(), group, topic, start);
         if (!collector.awaitAssignment(config.readinessTimeout())) {
             collector.close();
             throw new IllegalStateException(
@@ -111,8 +144,14 @@ public final class KafkaServiceHarness implements ServiceHarness {
         List<Header> recordHeaders = new ArrayList<>();
         headers.forEach((name, value) -> recordHeaders.add(new RecordHeader(name,
                 value == null ? null : value.getBytes(StandardCharsets.UTF_8))));
+        // The single point at which a booking id enters the deployment, so the
+        // single point at which it is stamped with this run's namespace. Key and
+        // payload together, because a step that reads the id back out of the
+        // payload has to see the same id the message was keyed with.
+        String scopedKey = scope.qualify(key);
+        byte[] scopedPayload = scope.qualifyPayload(key, payload);
         try {
-            producer.send(new ProducerRecord<>(topic, null, timestamp, key, payload,
+            producer.send(new ProducerRecord<>(topic, null, timestamp, scopedKey, scopedPayload,
                     recordHeaders)).get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -151,20 +190,43 @@ public final class KafkaServiceHarness implements ServiceHarness {
 
     /** Correlates by key, never by arrival order: partitioned delivery is unordered by design. */
     private Optional<ConsumedMessage> await(MessageCollector collector, String bookingId, Duration timeout) {
-        return PollUntil.present(() -> collector.receivedFor(bookingId).stream().findFirst(), timeout);
+        return PollUntil.present(() -> observedFor(collector, bookingId).stream().findFirst(), timeout);
     }
 
     @Override
     public boolean nothingArrivedFor(String bookingId, String topic, Duration window) {
         MessageCollector collector = collectorFor(topic);
         boolean appeared = PollUntil.everTrue(
-                () -> !collector.receivedFor(bookingId).isEmpty(), window);
+                () -> !observedFor(collector, bookingId).isEmpty(), window);
         return !appeared;
     }
 
     @Override
     public List<ConsumedMessage> drain(String topic) {
-        return collectorFor(topic).received();
+        return observed(collectorFor(topic));
+    }
+
+    /**
+     * Everything on the topic that this run put there, in the ids the feature
+     * file wrote.
+     *
+     * <p>Both halves matter on a shared topic and neither costs anything on a
+     * topic the suite owns. Without the filter a scenario correlates on another
+     * run's booking of the same name; without the localisation every assertion
+     * above the harness would have to know about a namespace that is purely a
+     * transport concern.
+     */
+    private List<ConsumedMessage> observed(MessageCollector collector) {
+        return collector.received().stream()
+                .filter(scope::published)
+                .map(scope::localise)
+                .toList();
+    }
+
+    private List<ConsumedMessage> observedFor(MessageCollector collector, String bookingId) {
+        return observed(collector).stream()
+                .filter(message -> bookingId.equals(message.key()))
+                .toList();
     }
 
     private MessageCollector collectorFor(String topic) {
@@ -193,7 +255,13 @@ public final class KafkaServiceHarness implements ServiceHarness {
     public void close() {
         collectors.forEach(MessageCollector::close);
         producer.close(Duration.ofSeconds(5));
-        provisioner.delete(List.of(rawTopic, enrichedTopic, flaggedTopic));
-        provisioner.close();
+        // Null exactly when the topics were not this suite's to create, and so
+        // are not its to delete either. Deleting the deployment's raw topic
+        // because a scenario finished would be the worst thing this suite could
+        // do to an environment it was only meant to observe.
+        if (provisioner != null) {
+            provisioner.delete(List.of(rawTopic, enrichedTopic, flaggedTopic));
+            provisioner.close();
+        }
     }
 }
