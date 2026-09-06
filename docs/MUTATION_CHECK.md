@@ -66,11 +66,11 @@ never had the service repository on it.
 | `mut-normalised-original` | TC-22, TC-23, TC-46, TC-50 | TC-30, TC-41, TC-70 | as expected | 2026-09-06 |
 | `mut-reverse-order` | TC-39 | TC-30, TC-31, TC-35, TC-53 | as expected | 2026-09-06 |
 | `mut-silent` | TC-32, TC-63 | none | as expected | 2026-09-06 |
-| `mut-const-key` | TC-21, TC-30, TC-35, TC-36, TC-52 | none | **differs** | 2026-09-06 |
+| `mut-const-key` | TC-35, TC-36, TC-52 | TC-21, TC-30 | as expected | 2026-09-06 |
 | `mut-double-publish` | TC-32, TC-34 | TC-30, TC-31, TC-33, TC-41, TC-42 | as expected | 2026-09-06 |
 | `mut-route-swap` | TC-60 | TC-61 | as expected | 2026-09-06 |
 
-14 of 15 run(s) turned exactly their expected set red.
+15 of 15 run(s) turned exactly their expected set red.
 
 
 ### What the columns mean
@@ -87,17 +87,7 @@ A `@TC-nn` covering a Scenario Outline is listed red if any of its rows is red.
 
 ## 5. Findings
 
-Where observed and expected differ, the observation wins. The expected set is a prediction about the suite; a difference is what the check is for.
-
-### `mut-const-key`
-
-- expected red: TC-35, TC-36, TC-52
-- observed red: TC-21, TC-30, TC-35, TC-36, TC-52
-- red but not expected: TC-21, TC-30
-- expected but stayed green: none
-
-TC-30 and TC-21 are declared controls, and they are expected to fail anyway. B-7 rewrote the key assertion in MessageContractSteps to locate its message by payload, but the routing step that runs before it (RoutingSteps, via MessageCollector.receivedFor) still correlates by key. A service that emitted the wrong key therefore fails every scenario that awaits a message, and reports it as nothing arrived rather than as a wrong key. That is a finding about the harness, not about these two scenarios, and it is the same spread the 2026-09-06 run against the real service saw on TC-30 and TC-31.
-
+None: every fixture turned exactly the set expected of it.
 
 ## 6. What each run covered
 
