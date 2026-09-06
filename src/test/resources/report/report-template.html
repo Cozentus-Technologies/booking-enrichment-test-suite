@@ -324,13 +324,14 @@ pre{margin:0;padding:10px 12px;background:var(--panel);border:1px solid var(--ru
 
   <div class="card">
     <h2><span class="no">10.1</span>Coverage summary</h2>
+    <p class="hint">Coverage here is <b>scenario coverage against <span class="m">spec/test-cases.yaml</span></b>: the catalogued test cases this cycle executed, as a share of the cases the catalogue defines. It is not, and does not approximate, code coverage.</p>
     <div class="mx" id="covMx"></div>
-    <p class="note">Code coverage is not reported. This is a black-box suite executing against the service's external interface; instruction and branch coverage are measured by the development team's unit tests and reported separately.</p>
+    <p class="note">Code coverage is out of scope for this report. This is a black-box suite: it reaches the service only through Kafka and its readiness endpoint, and has no visibility of a line or a branch inside it. Instruction and branch coverage are owned by the development team's own unit tests and reported separately. No figure anywhere in this report is derived from the service's source.</p>
   </div>
 
   <div class="card">
     <h2><span class="no">10.2</span>Planned but not executed</h2>
-    <p class="hint">Execution slippage for this cycle, with the reason each scenario did not run.</p>
+    <p class="hint">Execution slippage for this cycle: cases present in <span class="m">spec/test-cases.yaml</span> that this run did not reach, with the reason each did not run. A case listed here counts toward planned and not toward executed.</p>
     <div class="tw"><table>
       <thead><tr><th>Test case</th><th>Title</th><th>Module</th><th>Priority</th><th>Reason</th></tr></thead>
       <tbody id="slipBody"></tbody>
