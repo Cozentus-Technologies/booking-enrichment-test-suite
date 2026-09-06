@@ -2,7 +2,10 @@ package com.cozentus.enrichment.tests.data;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.cozentus.enrichment.tests.model.CityField;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.DisplayName;
@@ -38,7 +41,7 @@ class FeatureGeneratorTest {
     @Test
     @DisplayName("every scenario carries exactly one traceability tag")
     void everyScenarioIsTraceable() {
-        List<String> traceability = matches("(@TC-\\d{2})\\s*$");
+        List<String> traceability = matches("(@TC-\\d{2,3})\\s*$");
 
         assertThat(traceability).hasSize(CASES.size()).doesNotHaveDuplicates();
     }
@@ -47,12 +50,14 @@ class FeatureGeneratorTest {
     @DisplayName("an enriched row asserts its expected city; a flagged row asserts the exact reason")
     void assertionMatchesOutcome() {
         for (CityCase testCase : CASES) {
+            String field = testCase.field().lowerName();
             if (testCase.isEnriched()) {
                 assertThat(FEATURE).as("%s", testCase.caseId())
-                        .contains("And its origin is \"" + testCase.expected() + "\"");
+                        .contains("And its " + field + " is \"" + testCase.expected() + "\"");
             } else {
                 assertThat(FEATURE).as("%s", testCase.caseId())
-                        .contains("And the reason is \"" + testCase.reason().trim() + "_ORIGIN_CITY\"");
+                        .contains("And the reason is \"" + testCase.reason().trim()
+                                + testCase.field().reasonSuffix() + "\"");
             }
         }
     }
@@ -81,7 +86,10 @@ class FeatureGeneratorTest {
         assertThat(FEATURE)
                 .contains("with no origin field and destination")
                 .contains("with a null origin and destination")
-                .doesNotContain("with origin \"<ABSENT>\"");
+                .contains("with no destination field and origin")
+                .contains("with a null destination and origin")
+                .doesNotContain("with origin \"<ABSENT>\"")
+                .doesNotContain("with destination \"<ABSENT>\"");
     }
 
     @Test
@@ -106,5 +114,44 @@ class FeatureGeneratorTest {
         CityCase first = CASES.get(0);
 
         assertThat(FEATURE).contains(first.note());
+    }
+
+    @Test
+    @DisplayName("B-1: every case is mirrored onto the destination field")
+    void bothFieldsAreCovered() {
+        Map<CityField, Long> byField = CASES.stream()
+                .collect(Collectors.groupingBy(CityCase::field, Collectors.counting()));
+
+        assertThat(byField)
+                .as("a rule proven only on origin is not proven on destination")
+                .containsEntry(CityField.ORIGIN, byField.get(CityField.DESTINATION));
+        assertThat(matches("^  Scenario: (.+)$")).hasSize(CASES.size());
+    }
+
+    @Test
+    @DisplayName("B-1: each outcome class is exercised on both fields")
+    void everyOutcomeClassOnBothFields() {
+        for (CityField field : CityField.values()) {
+            List<String> classes = CASES.stream()
+                    .filter(c -> c.field() == field)
+                    .map(c -> c.outcome() + "/" + c.reason().trim())
+                    .distinct()
+                    .toList();
+
+            assertThat(classes).as("outcome classes on %s", field)
+                    .contains("ENRICHED/", "FLAGGED/UNMATCHED", "FLAGGED/MISSING");
+        }
+    }
+
+    @Test
+    @DisplayName("B-1: the field not under test is pinned to a known-good value")
+    void theOtherFieldIsHeldConstant() {
+        for (CityCase testCase : CASES) {
+            String otherField = testCase.field().other().lowerName();
+
+            assertThat(FeatureGenerator.given(testCase))
+                    .as("%s must vary only %s", testCase.caseId(), testCase.field().lowerName())
+                    .contains(otherField + " \"Mumbai\"");
+        }
     }
 }

@@ -85,6 +85,16 @@ public class PublishSteps {
         stage(bookingId, booking(bookingId).withoutOrigin().destination(destination).build());
     }
 
+    @Given("a booking {string} with a null destination and origin {string}")
+    public void aBookingWithNullDestination(String bookingId, String origin) {
+        stage(bookingId, booking(bookingId).origin(origin).nullDestination().build());
+    }
+
+    @Given("a booking {string} with no destination field and origin {string}")
+    public void aBookingWithNoDestinationField(String bookingId, String origin) {
+        stage(bookingId, booking(bookingId).origin(origin).withoutDestination().build());
+    }
+
     /**
      * Setup, not an assertion: every scenario using this phrasing does so before
      * its When, naming the cities of the booking staged by the previous Given.

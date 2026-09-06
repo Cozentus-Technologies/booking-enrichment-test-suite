@@ -23,6 +23,9 @@ import java.util.List;
  */
 public final class FeatureGenerator {
 
+    /** The value the field not under test is held at, so a failure names one field. */
+    private static final String HELD_CONSTANT = "Mumbai";
+
     private static final String DEFAULT_OUTPUT =
             "target/generated-features/functional/city_correction.feature";
 
@@ -79,10 +82,11 @@ public final class FeatureGenerator {
 
             if (testCase.isEnriched()) {
                 feature.append("    Then it lands on the enriched topic\n");
-                feature.append("    And its origin is \"").append(testCase.expected()).append("\"\n");
+                feature.append("    And its ").append(testCase.field().lowerName())
+                        .append(" is \"").append(testCase.expected()).append("\"\n");
             } else {
                 feature.append("    Then it lands on the flagged topic\n");
-                feature.append("    And the reason is \"").append(originReason(testCase)).append("\"\n");
+                feature.append("    And the reason is \"").append(reason(testCase)).append("\"\n");
             }
             feature.append('\n');
         }
@@ -90,35 +94,49 @@ public final class FeatureGenerator {
     }
 
     /**
-     * The CSV abbreviates the reason because every row varies the origin; the
-     * scenario states the full constant the service actually emits, which is
-     * also the vocabulary the hand-written features use.
+     * The CSV abbreviates the reason; the scenario states the full constant the
+     * service emits, which is also the vocabulary the hand-written features use.
      */
-    private static String originReason(CityCase testCase) {
-        return testCase.reason().trim() + "_ORIGIN_CITY";
+    private static String reason(CityCase testCase) {
+        return testCase.reason().trim() + testCase.field().reasonSuffix();
     }
 
-    /** The Given line, which differs for the two sentinel forms. */
-    private static String given(CityCase testCase) {
+    /**
+     * The Given line. It names the field under test and pins the other one to
+     * {@code Mumbai}: a case that varied both fields at once could not say which
+     * of them the service got wrong.
+     */
+    static String given(CityCase testCase) {
+        String field = testCase.field().lowerName();
+        String other = testCase.field().other().lowerName();
+
         if (testCase.fieldIsAbsent()) {
-            return "    Given a booking \"%s\" with no origin field and destination \"Mumbai\"%n"
-                    .formatted(testCase.caseId());
+            return "    Given a booking \"%s\" with no %s field and %s \"%s\"%n"
+                    .formatted(testCase.caseId(), field, other, HELD_CONSTANT);
         }
         if (testCase.fieldIsNull()) {
-            return "    Given a booking \"%s\" with a null origin and destination \"Mumbai\"%n"
-                    .formatted(testCase.caseId());
+            return "    Given a booking \"%s\" with a null %s and %s \"%s\"%n"
+                    .formatted(testCase.caseId(), field, other, HELD_CONSTANT);
         }
-        return "    Given a booking \"%s\" with origin \"%s\" and destination \"Mumbai\"%n"
-                .formatted(testCase.caseId(), testCase.input());
+        // Origin before destination whichever is under test, so the step matches
+        // the one phrasing the hand-written features already use.
+        String origin = testCase.field() == com.cozentus.enrichment.tests.model.CityField.ORIGIN
+                ? testCase.input() : HELD_CONSTANT;
+        String destination = testCase.field() == com.cozentus.enrichment.tests.model.CityField.ORIGIN
+                ? HELD_CONSTANT : testCase.input();
+        return "    Given a booking \"%s\" with origin \"%s\" and destination \"%s\"%n"
+                .formatted(testCase.caseId(), origin, destination);
     }
 
     private static String title(CityCase testCase) {
+        String field = testCase.field().lowerName();
         String subject = switch (testCase.input()) {
-            case CityCase.ABSENT -> "an absent origin field";
-            case CityCase.NULL_LITERAL -> "a null origin";
+            case CityCase.ABSENT -> "an absent " + field + " field";
+            case CityCase.NULL_LITERAL -> "a null " + field;
             default -> testCase.input().isBlank()
-                    ? "an origin of " + quoted(testCase.input())
-                    : "origin " + quoted(testCase.input());
+                    ? "a" + ("aeiou".indexOf(field.charAt(0)) >= 0 ? "n " : " ") + field
+                            + " of " + quoted(testCase.input())
+                    : field + " " + quoted(testCase.input());
         };
         return testCase.caseId() + " - " + subject + " is "
                 + (testCase.isEnriched() ? "corrected to " + testCase.expected() : "flagged");

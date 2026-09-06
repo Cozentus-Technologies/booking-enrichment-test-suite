@@ -1,5 +1,6 @@
 package com.cozentus.enrichment.tests.data;
 
+import com.cozentus.enrichment.tests.model.CityField;
 import com.cozentus.enrichment.tests.model.Outcome;
 import com.cozentus.enrichment.tests.support.Json;
 import org.junit.jupiter.api.Test;
@@ -151,6 +152,6 @@ class VolumeDataGeneratorTest {
     }
 
     private static CityCase caseRow(String caseId, String input, Outcome outcome) {
-        return new CityCase(caseId, input, "", outcome, "", List.of("@fast"), "");
+        return new CityCase(caseId, CityField.ORIGIN, input, "", outcome, "", List.of("@fast"), "");
     }
 }

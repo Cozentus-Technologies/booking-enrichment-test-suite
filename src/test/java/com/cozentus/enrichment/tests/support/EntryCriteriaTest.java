@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import com.cozentus.enrichment.tests.data.TestDataLoader;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 /**
@@ -57,7 +59,11 @@ class EntryCriteriaTest {
 
         assertThat(result.name()).isEqualTo("Data table parses");
         assertThat(result.passed()).isTrue();
-        assertThat(result.detail()).contains("20");
+        // Derived, not literal: a hard-coded count turns every legitimate
+        // addition to the table into a failure in an unrelated test.
+        assertThat(result.detail())
+                .contains(String.valueOf(TestDataLoader.load().size()))
+                .contains("row(s) loaded");
     }
 
     // ---- check 2: contracts available --------------------------------------

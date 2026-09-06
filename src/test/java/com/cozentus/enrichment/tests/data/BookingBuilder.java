@@ -52,6 +52,18 @@ public final class BookingBuilder {
         return this;
     }
 
+    /** The destination mirror of {@link #nullOrigin()}, for the B-1 cases. */
+    public BookingBuilder nullDestination() {
+        node.putNull("destination");
+        return this;
+    }
+
+    /** The destination mirror of {@link #withoutOrigin()}, for the B-1 cases. */
+    public BookingBuilder withoutDestination() {
+        node.remove("destination");
+        return this;
+    }
+
     public BookingBuilder shipper(String value) {
         node.put("shipper", value);
         return this;

@@ -1,5 +1,6 @@
 package com.cozentus.enrichment.tests.data;
 
+import com.cozentus.enrichment.tests.model.CityField;
 import com.cozentus.enrichment.tests.model.Outcome;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -75,7 +76,12 @@ public final class TestDataLoader {
         if (tags.isEmpty()) {
             throw new IllegalStateException(caseId + " has no tags");
         }
+        String field = column(header, values, "field");
+        if (field.isBlank()) {
+            throw new IllegalStateException(caseId + " does not say which field it varies");
+        }
         return new CityCase(caseId,
+                CityField.valueOf(field.trim().toUpperCase(java.util.Locale.ROOT)),
                 column(header, values, "input"),
                 column(header, values, "expected"),
                 Outcome.valueOf(outcome.trim()),

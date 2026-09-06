@@ -1,5 +1,6 @@
 package com.cozentus.enrichment.tests.data;
 
+import com.cozentus.enrichment.tests.model.CityField;
 import com.cozentus.enrichment.tests.model.Outcome;
 import java.util.List;
 
@@ -11,6 +12,7 @@ import java.util.List;
  * {@code null} means a JSON null literal rather than the four-character string.
  */
 public record CityCase(String caseId,
+                       CityField field,
                        String input,
                        String expected,
                        Outcome outcome,
