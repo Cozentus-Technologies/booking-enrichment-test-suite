@@ -10,8 +10,17 @@ import java.util.Map;
  */
 public final class Metrics {
 
-    /** A metric name the exit criteria can reference, its value, and how it was derived. */
+    /**
+     * A metric name the exit criteria can reference, its value, and how it was
+     * derived. A NaN value means the run could not measure it; that is not the
+     * same fact as zero and the report has to keep them apart, or a constant
+     * gets published as a measurement (D-6).
+     */
     public record Metric(String name, double value, String formula, String detail) {
+
+        public boolean measured() {
+            return !Double.isNaN(value);
+        }
     }
 
     private final Map<String, Metric> byName = new LinkedHashMap<>();
@@ -19,26 +28,35 @@ public final class Metrics {
     private Metrics() {
     }
 
-    public static Metrics compute(List<RunResult> results, int planned, Defects defects,
+    /** The degenerate plan, where the run is taken to be its own plan. */
+    public static Metrics compute(List<RunResult> results, Defects defects,
                                   Requirements requirements) {
-        return compute(results, planned, defects, requirements, 1, java.util.Map.of());
+        return compute(results, PlannedCase.of(results), defects, requirements,
+                RunHistory.empty(), java.util.Map.of());
     }
 
     /**
-     * @param historyDepth how many runs are recorded, for metrics that only
-     *                     mean something across repetitions
-     * @param budgets      profile name to budgeted seconds
+     * @param planned the catalogue, not the run. Deriving it from {@code
+     *                results} is what made execution completeness 100% by
+     *                construction (D-4/D-5).
+     * @param history recorded runs, for the metrics that only mean something
+     *                across repetitions
+     * @param budgets profile name to budgeted seconds
      */
-    public static Metrics compute(List<RunResult> results, int planned, Defects defects,
-                                  Requirements requirements, int historyDepth,
+    public static Metrics compute(List<RunResult> resultsAsRun, List<PlannedCase> planned,
+                                  Defects defects, Requirements requirements,
+                                  RunHistory history,
                                   java.util.Map<String, Integer> budgets) {
         Metrics metrics = new Metrics();
+        ModuleVocabulary vocabulary = new ModuleVocabulary(planned);
+        List<RunResult> results = vocabulary.applyTo(resultsAsRun);
+        int plannedCount = planned.size();
 
         long executed = results.stream().filter(RunResult::executed).count();
         long passed = results.stream().filter(RunResult::passed).count();
 
-        metrics.put("test_case_execution", percent(executed, planned),
-                "executed / planned", "%d / %d".formatted(executed, planned));
+        metrics.put("test_case_execution", percent(executed, plannedCount),
+                "executed / planned", "%d / %d".formatted(executed, plannedCount));
         metrics.put("pass_rate", percent(passed, executed),
                 "passed / executed", "%d / %d".formatted(passed, executed));
 
@@ -73,17 +91,20 @@ public final class Metrics {
         // Criteria in spec/exit-criteria.yaml name these directly. A criterion
         // whose metric is absent is reported "not measured" and counts as unmet,
         // never as silently satisfied, so a missing metric cannot pass a gate.
-        long criticalPlanned = results.stream()
-                .filter(r -> "Critical".equalsIgnoreCase(r.priority())).count();
+        // D-5: both sides used to come from the executed list, so the rate
+        // could not fall below 100% however much of the plan a tag filter had
+        // skipped - and it is a blocking exit criterion.
+        long criticalPlanned = planned.stream()
+                .filter(p -> "Critical".equalsIgnoreCase(p.priority())).count();
         long criticalExecuted = results.stream()
                 .filter(r -> "Critical".equalsIgnoreCase(r.priority())).filter(RunResult::executed).count();
         metrics.put("critical_execution_rate", percent(criticalExecuted, criticalPlanned),
                 "critical executed / critical planned",
                 "%d / %d".formatted(criticalExecuted, criticalPlanned));
 
-        metrics.put("scenario_coverage", percent(executed, planned),
+        metrics.put("scenario_coverage", percent(executed, plannedCount),
                 "executed / planned, against the specification",
-                "%d / %d".formatted(executed, planned));
+                "%d / %d".formatted(executed, plannedCount));
 
         long s1 = defects == null ? 0 : defects.open().stream()
                 .filter(d -> "S1".equalsIgnoreCase(d.severity())).count();
@@ -112,37 +133,40 @@ public final class Metrics {
         java.util.Map<String, Long> byModule = new java.util.LinkedHashMap<>();
         results.stream().filter(RunResult::executed)
                 .forEach(r -> byModule.merge(r.module(), 1L, Long::sum));
+        // D-10: both sides now speak the catalogue's vocabulary. Joined on the
+        // raw strings, only "Message contract" matched.
+        java.util.Map<String, Long> defectsByModule = vocabulary.defectsByModule(defects);
         double worstDensity = 0;
         String worstModule = "none";
-        if (defects != null) {
-            for (var entry : byModule.entrySet()) {
-                long moduleDefects = defects.all().stream()
-                        .filter(d -> entry.getKey().equalsIgnoreCase(d.module())).count();
-                double density = entry.getValue() == 0 ? 0 : (double) moduleDefects / entry.getValue();
-                if (density > worstDensity) {
-                    worstDensity = density;
-                    worstModule = entry.getKey();
-                }
+        for (var entry : byModule.entrySet()) {
+            long moduleDefects = defectsByModule.getOrDefault(entry.getKey(), 0L);
+            double density = entry.getValue() == 0 ? 0 : (double) moduleDefects / entry.getValue();
+            if (density > worstDensity) {
+                worstDensity = density;
+                worstModule = entry.getKey();
             }
         }
         metrics.put("defect_density", worstDensity,
                 "defects / test cases executed, per module",
                 "highest in %s".formatted(worstModule));
 
-        // Leakage needs a prior cycle to have escaped from. With one cycle of
-        // history there is nothing to have leaked, and the report says so rather
-        // than printing a zero that looks like a measurement.
-        long priorCycles = Math.max(0, historyDepth - 1);
-        metrics.put("defect_leakage", 0,
-                "defects escaped from a prior cycle / total defects",
-                priorCycles == 0 ? "no prior cycle to leak from" : "0 escaped");
+        // D-6. Both of these used to be constants: leakage was the literal 0
+        // and stability reduced to percent(n, n) for every n. A number nothing
+        // can move is not a measurement, so where the history cannot support
+        // one the report says so instead of printing a figure.
+        java.util.OptionalDouble leakage = history.leakage(defects);
+        metrics.put("defect_leakage", leakage.orElse(Double.NaN),
+                "defects whose found-by case passed in an earlier recorded run / defects",
+                leakage.isPresent()
+                        ? "%d recorded runs".formatted(history.runs())
+                        : "not measured");
 
-        // Stability is a property of repetition. A single run cannot show it, so
-        // it is reported against the runs actually recorded in history.
-        metrics.put("automation_stability", historyDepth <= 1 ? 100 : percent(historyDepth, historyDepth),
-                "non-flaky runs / total runs",
-                historyDepth <= 1 ? "single run; no repetition to judge"
-                        : "%d recorded runs".formatted(historyDepth));
+        java.util.OptionalDouble stability = history.stability();
+        metrics.put("automation_stability", stability.orElse(Double.NaN),
+                "cases with the same outcome in every run that executed them / repeated cases",
+                stability.isPresent()
+                        ? "%d recorded runs".formatted(history.runs())
+                        : "not measured");
 
         double totalSeconds = results.stream().mapToDouble(RunResult::durationSeconds).sum();
         metrics.put("execution_duration_seconds", totalSeconds,
@@ -176,10 +200,10 @@ public final class Metrics {
                 break;
             }
         }
-        metrics.put("mean_time_to_detect",
-                results.stream().anyMatch(r -> r.status() == RunResult.Status.FAIL) ? toFirstFailure : 0,
+        boolean anyFailure = results.stream().anyMatch(r -> r.status() == RunResult.Status.FAIL);
+        metrics.put("mean_time_to_detect", anyFailure ? toFirstFailure : Double.NaN,
                 "cumulative duration to the first failing case",
-                "%.1f s".formatted(toFirstFailure));
+                anyFailure ? "%.1f s".formatted(toFirstFailure) : "not measured");
 
         return metrics;
     }
@@ -191,6 +215,11 @@ public final class Metrics {
     public double value(String name) {
         Metric metric = byName.get(name);
         return metric == null ? Double.NaN : metric.value();
+    }
+
+    public boolean measured(String name) {
+        Metric metric = byName.get(name);
+        return metric != null && metric.measured();
     }
 
     public Metric metric(String name) {

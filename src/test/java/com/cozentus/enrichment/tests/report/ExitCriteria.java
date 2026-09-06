@@ -53,7 +53,10 @@ public final class ExitCriteria {
             double actual = metric == null ? Double.NaN : metric.value();
             boolean met = !Double.isNaN(actual) && compare(actual, criterion.operator(), criterion.target());
 
-            String actualText = metric == null
+            // A metric the run could not measure reads "not measured" and
+            // counts as unmet. Formatting NaN as a percentage would put a
+            // number on a gate nothing had evaluated.
+            String actualText = metric == null || !metric.measured()
                     ? "not measured"
                     : "%s · %.1f%%".formatted(metric.detail(), actual);
             String targetText = "%s %.0f%%".formatted(symbol(criterion.operator()), criterion.target());

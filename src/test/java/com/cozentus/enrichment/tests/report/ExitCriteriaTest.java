@@ -15,7 +15,7 @@ class ExitCriteriaTest {
     }
 
     private static Metrics metricsWith(List<RunResult> results) {
-        return Metrics.compute(results, results.size(), Defects.empty(), Requirements.empty());
+        return Metrics.compute(results, Defects.empty(), Requirements.empty());
     }
 
     @Test
