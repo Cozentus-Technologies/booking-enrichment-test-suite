@@ -44,6 +44,34 @@ public final class CucumberResults {
         }
     }
 
+    /**
+     * When the run started, from the earliest scenario's own timestamp.
+     *
+     * <p>D-7: history has to identify a run by something the run produced.
+     * Stamping the moment of generation instead made every regeneration look
+     * like a fresh cycle.
+     */
+    public static String runStartedAt(Path cucumberJson) {
+        if (!Files.exists(cucumberJson)) {
+            return null;
+        }
+        try {
+            JsonNode root = MAPPER.readTree(Files.readString(cucumberJson, StandardCharsets.UTF_8));
+            String earliest = null;
+            for (JsonNode feature : root) {
+                for (JsonNode element : feature.path("elements")) {
+                    String stamp = element.path("start_timestamp").asText("");
+                    if (!stamp.isEmpty() && (earliest == null || stamp.compareTo(earliest) < 0)) {
+                        earliest = stamp;
+                    }
+                }
+            }
+            return earliest;
+        } catch (IOException unreadable) {
+            return null;
+        }
+    }
+
     static List<RunResult> parse(JsonNode root) {
         Map<String, RunResult> byCase = new LinkedHashMap<>();
 
