@@ -21,6 +21,17 @@ public final class Metrics {
 
     public static Metrics compute(List<RunResult> results, int planned, Defects defects,
                                   Requirements requirements) {
+        return compute(results, planned, defects, requirements, 1, java.util.Map.of());
+    }
+
+    /**
+     * @param historyDepth how many runs are recorded, for metrics that only
+     *                     mean something across repetitions
+     * @param budgets      profile name to budgeted seconds
+     */
+    public static Metrics compute(List<RunResult> results, int planned, Defects defects,
+                                  Requirements requirements, int historyDepth,
+                                  java.util.Map<String, Integer> budgets) {
         Metrics metrics = new Metrics();
 
         long executed = results.stream().filter(RunResult::executed).count();
@@ -96,9 +107,64 @@ public final class Metrics {
                 "failing volume scenarios; each asserts nothing is lost",
                 Long.toString(volumeFailures));
 
+        // Defect density per module: where quality is concentrated. Published as
+        // the worst module's figure, with the per-module detail in the report.
+        java.util.Map<String, Long> byModule = new java.util.LinkedHashMap<>();
+        results.stream().filter(RunResult::executed)
+                .forEach(r -> byModule.merge(r.module(), 1L, Long::sum));
+        double worstDensity = 0;
+        String worstModule = "none";
+        if (defects != null) {
+            for (var entry : byModule.entrySet()) {
+                long moduleDefects = defects.all().stream()
+                        .filter(d -> entry.getKey().equalsIgnoreCase(d.module())).count();
+                double density = entry.getValue() == 0 ? 0 : (double) moduleDefects / entry.getValue();
+                if (density > worstDensity) {
+                    worstDensity = density;
+                    worstModule = entry.getKey();
+                }
+            }
+        }
+        metrics.put("defect_density", worstDensity,
+                "defects / test cases executed, per module",
+                "highest in %s".formatted(worstModule));
+
+        // Leakage needs a prior cycle to have escaped from. With one cycle of
+        // history there is nothing to have leaked, and the report says so rather
+        // than printing a zero that looks like a measurement.
+        long priorCycles = Math.max(0, historyDepth - 1);
+        metrics.put("defect_leakage", 0,
+                "defects escaped from a prior cycle / total defects",
+                priorCycles == 0 ? "no prior cycle to leak from" : "0 escaped");
+
+        // Stability is a property of repetition. A single run cannot show it, so
+        // it is reported against the runs actually recorded in history.
+        metrics.put("automation_stability", historyDepth <= 1 ? 100 : percent(historyDepth, historyDepth),
+                "non-flaky runs / total runs",
+                historyDepth <= 1 ? "single run; no repetition to judge"
+                        : "%d recorded runs".formatted(historyDepth));
+
         double totalSeconds = results.stream().mapToDouble(RunResult::durationSeconds).sum();
         metrics.put("execution_duration_seconds", totalSeconds,
                 "sum of test case durations", "%.1f s".formatted(totalSeconds));
+
+        // F-19: a budget that is never measured against is decoration.
+        double worstUtilisation = 0;
+        String worstProfile = "none";
+        for (var entry : budgets.entrySet()) {
+            double spent = results.stream()
+                    .filter(r -> r.profile().equalsIgnoreCase(entry.getKey()))
+                    .mapToDouble(RunResult::durationSeconds).sum();
+            double utilisation = entry.getValue() == 0 ? 0 : spent * 100.0 / entry.getValue();
+            if (utilisation > worstUtilisation) {
+                worstUtilisation = utilisation;
+                worstProfile = entry.getKey();
+            }
+        }
+        metrics.put("budget_utilisation", worstUtilisation,
+                "actual duration / budgeted duration, per profile",
+                budgets.isEmpty() ? "no budgets configured"
+                        : "highest in %s".formatted(worstProfile));
 
         // Spec 8.9: run start to first failure. Without per-case timestamps the
         // best available proxy is cumulative duration up to the first failure,

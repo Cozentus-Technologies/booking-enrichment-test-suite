@@ -73,7 +73,17 @@ public final class ReportGenerator {
         List<Map<String, Object>> planned = spec.plannedCases();
         int plannedCount = planned.isEmpty() ? results.size() : planned.size();
 
-        Metrics metrics = Metrics.compute(results, plannedCount, defects, requirements);
+        java.util.Map<String, Integer> budgetSeconds = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> row : spec.list("budgets.yaml")) {
+            Object seconds = row.get("budget_seconds");
+            if (seconds instanceof Number number) {
+                budgetSeconds.put(text(row, "profile", ""), number.intValue());
+            }
+        }
+        int historyDepth = countHistory();
+
+        Metrics metrics = Metrics.compute(results, plannedCount, defects, requirements,
+                historyDepth, budgetSeconds);
         List<ExitCriteria.Evaluated> criteria =
                 ExitCriteria.evaluate(spec.exitCriteria(), metrics);
         ExitCriteria.Recommendation recommendation =
@@ -306,6 +316,19 @@ public final class ReportGenerator {
     }
 
     // --- history ---------------------------------------------------------
+
+    /** How many runs are on record, for metrics that need repetition to mean anything. */
+    private int countHistory() {
+        if (!Files.exists(historyFile)) {
+            return 0;
+        }
+        try {
+            return (int) Files.readAllLines(historyFile, StandardCharsets.UTF_8).stream()
+                    .filter(line -> !line.isBlank()).count();
+        } catch (IOException unreadable) {
+            return 0;
+        }
+    }
 
     private ArrayNode history() {
         ArrayNode array = MAPPER.createArrayNode();

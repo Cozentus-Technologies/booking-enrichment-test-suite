@@ -205,6 +205,19 @@
             </configuration>
           </execution>
           <execution>
+            <!-- F-05: an untagged scenario fails the build. Tags drive selective
+                 execution, priority reporting, release gating and traceability;
+                 a scenario missing one cannot be sliced, reported or traced.
+                 Runs before the tests, so the failure is immediate and cheap. -->
+            <id>enforce-tag-discipline</id>
+            <phase>process-test-classes</phase>
+            <goals><goal>java</goal></goals>
+            <configuration>
+              <classpathScope>test</classpathScope>
+              <mainClass>com.cozentus.enrichment.tests.support.TagDiscipline</mainClass>
+            </configuration>
+          </execution>
+          <execution>
             <!-- Spec 8.10: the Test Execution Summary Report, generated after the
                  tests have written cucumber.json. Generation must never fail the
                  build, so the generator catches its own errors and the run result
