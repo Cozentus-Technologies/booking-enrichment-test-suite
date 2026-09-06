@@ -218,6 +218,17 @@
             </configuration>
           </execution>
           <execution>
+            <!-- A-1: a run that reports success having executed no scenarios is a
+                 failure. Bound after the tests so it sees the finished report. -->
+            <id>guard-against-empty-runs</id>
+            <phase>test</phase>
+            <goals><goal>java</goal></goals>
+            <configuration>
+              <classpathScope>test</classpathScope>
+              <mainClass>com.cozentus.enrichment.tests.support.ExecutionGuard</mainClass>
+            </configuration>
+          </execution>
+          <execution>
             <!-- Spec 8.10: the Test Execution Summary Report, generated after the
                  tests have written cucumber.json. Generation must never fail the
                  build, so the generator catches its own errors and the run result
@@ -275,8 +286,16 @@
 
   <profiles>
     <profile>
-      <!-- docker compose up -d in the service repo, then mvn test -Pkafka -->
+      <!-- docker compose up -d in the service repo, then mvn test -Pkafka.
+           A-2: also activates automatically whenever a tag filter is supplied.
+           Every documented command passes one, and without the profile the whole
+           Cucumber suite is excluded, so those commands used to pass in two
+           seconds having executed nothing. Auto-activation means the
+           documentation cannot drift back into that state. -->
       <id>kafka</id>
+      <activation>
+        <property><name>cucumber.filter.tags</name></property>
+      </activation>
       <build>
         <plugins>
           <plugin>
