@@ -24,9 +24,14 @@
 # literal `Scenario:` / `Scenario Outline:` text, including the TC id
 # where the generated feature embeds it in the title itself.
 #
-# 62 cases total: TC-01..TC-29, TC-30..TC-45, TC-50..TC-55, TC-60..TC-64,
-# TC-70..TC-75 (id ranges are not contiguous -- see TEST_SUITE_SPEC.md
-# section 7 and docs/traceability-matrix.md for why).
+# 99 cases total: TC-01..TC-29, TC-30..TC-49, TC-50..TC-58, TC-60..TC-64,
+# TC-70..TC-80, TC-101..TC-120, TC-176..TC-180 (id ranges are not
+# contiguous -- see TEST_SUITE_SPEC.md section 7 for why).
+#
+# This file drifted 37 cases behind the features once and nothing said so,
+# which silently pushed "executed / planned" over 100%. PlannedSetGuard now
+# fails the build when the @TC-nn set here and the set in the features (plus
+# the generated city_correction.feature) differ in either direction.
 #
 # TC-34, TC-38 and TC-60 are Scenario Outlines: Cucumber tags an outline,
 # not an individual Examples row, so each still contributes exactly one
@@ -38,7 +43,6 @@
 # volume suite is actually run and time-budgeted under (TEST_SUITE_SPEC.md
 # section 9.3/9.4, README's "Running the suite" table) -- see the `note`
 # field on each of those five entries.
-
 - id: TC-01
   title: TC-01 - origin "Mumbai" is corrected to Mumbai
   module: City correction
@@ -315,6 +319,33 @@
   priority: Medium
   profile: fast
   note: Does not publish a booking; compares the committed schema file against its previous version.
+- id: TC-46
+  title: Ambiguous origin is flagged with candidates in reference order
+  module: Booking level
+  type: Functional
+  priority: Critical
+  profile: slow
+  note: Needs a service instance started against an extended reference list (@Before hook), not just a longer wait.
+- id: TC-47
+  title: Both fields ambiguous produces both reasons, origin then destination
+  module: Booking level
+  type: Functional
+  priority: High
+  profile: slow
+  note: Needs a service instance started against an extended reference list (@Before hook), not just a longer wait.
+- id: TC-48
+  title: An exact match wins outright and is never reported ambiguous
+  module: Booking level
+  type: Functional
+  priority: Critical
+  profile: slow
+  note: Needs a service instance started against an extended reference list (@Before hook), not just a longer wait.
+- id: TC-49
+  title: The output message timestamp reflects processing time
+  module: Message contract
+  type: Functional
+  priority: Medium
+  profile: fast
 - id: TC-50
   title: A malformed payload is flagged as MALFORMED_MESSAGE
   module: Resilience
@@ -353,6 +384,27 @@
   type: Resilience
   priority: Low
   profile: fast
+- id: TC-56
+  title: A booking is not lost when the consumer restarts mid-batch
+  module: Resilience
+  type: Resilience
+  priority: High
+  profile: slow
+  note: Restarts the service on the same consumer group mid-batch; needs a broker-backed instance.
+- id: TC-57
+  title: An added field is accepted as a backward-compatible change
+  module: Schema contract
+  type: Contract
+  priority: High
+  profile: fast
+  note: Does not publish a booking; compares the committed schema against an additive fixture previous version.
+- id: TC-58
+  title: Removing a required field is rejected as a breaking change
+  module: Schema contract
+  type: Contract
+  priority: Critical
+  profile: fast
+  note: Does not publish a booking; compares the committed schema against a breaking fixture previous version.
 - id: TC-60
   title: Every booking is accounted for under load
   module: Volume
@@ -425,3 +477,213 @@
   type: Resilience
   priority: Low
   profile: nightly
+- id: TC-76
+  title: TC-76 - origin "Punr" is corrected to Pune
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-77
+  title: TC-77 - origin "Oune" is flagged
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-78
+  title: TC-78 - origin "Bangalr" is corrected to Bangalore
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-79
+  title: TC-79 - origin "Bangaloreeee" is flagged
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-80
+  title: TC-80 - origin "··New···Delhi·" is corrected to New Delhi
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-101
+  title: TC-101 - destination "Mumbai" is corrected to Mumbai
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-102
+  title: TC-102 - destination "MUMBAI" is corrected to Mumbai
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-103
+  title: TC-103 - destination "mumbai" is corrected to Mumbai
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-104
+  title: TC-104 - destination "··Mumbai··" is corrected to Mumbai
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-105
+  title: TC-105 - destination "New···Delhi" is corrected to New Delhi
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-106
+  title: TC-106 - destination "Mumbi" is corrected to Mumbai
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-107
+  title: TC-107 - destination "now·delhi" is corrected to New Delhi
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-108
+  title: TC-108 - destination "Bangalor" is corrected to Bangalore
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-109
+  title: TC-109 - destination "kolkatta" is corrected to Kolkata
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-110
+  title: TC-110 - destination "Ahmedabd" is corrected to Ahmedabad
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-111
+  title: TC-111 - destination "Pne" is corrected to Pune
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-112
+  title: TC-112 - destination "Delh" is corrected to New Delhi
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-113
+  title: TC-113 - destination "Pn" is flagged
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-114
+  title: TC-114 - destination "Mumbaiii" is flagged
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-115
+  title: TC-115 - destination "Warsaw" is flagged
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-116
+  title: TC-116 - destination "Lisbon" is flagged
+  module: City correction
+  type: Functional
+  priority: Medium
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-117
+  title: TC-117 - a destination of "" is flagged
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-118
+  title: TC-118 - a destination of "···" is flagged
+  module: City correction
+  type: Functional
+  priority: Medium
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-119
+  title: TC-119 - an absent destination field is flagged
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-120
+  title: TC-120 - a null destination is flagged
+  module: City correction
+  type: Functional
+  priority: Medium
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-176
+  title: TC-176 - destination "Punr" is corrected to Pune
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-177
+  title: TC-177 - destination "Oune" is flagged
+  module: City correction
+  type: Functional
+  priority: Critical
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-178
+  title: TC-178 - destination "Bangalr" is corrected to Bangalore
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-179
+  title: TC-179 - destination "Bangaloreeee" is flagged
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
+- id: TC-180
+  title: TC-180 - destination "··New···Delhi·" is corrected to New Delhi
+  module: City correction
+  type: Functional
+  priority: High
+  profile: fast
+  note: Generated from testdata/city-cases.csv by FeatureGenerator; the CSV row is the source of truth for its input, expectation and priority tag.
