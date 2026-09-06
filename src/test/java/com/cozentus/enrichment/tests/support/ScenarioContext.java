@@ -45,6 +45,18 @@ public class ScenarioContext {
         this.scenarioId = scenarioId;
     }
 
+    /**
+     * Replaces the running service, keeping the harness and its topics.
+     *
+     * <p>B-9 (TC-56) restarts the service on the same consumer group to prove a
+     * booking in flight is redelivered rather than lost. Only the process is
+     * replaced: a new harness would mean new topics, and the restart would then
+     * prove nothing.
+     */
+    public void replaceService(ServiceController restarted) {
+        this.service = restarted;
+    }
+
     public TestConfig config() {
         return require(config, "configuration");
     }

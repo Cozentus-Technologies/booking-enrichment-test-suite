@@ -44,3 +44,14 @@ Feature: Message-level contract on the output topics
     Given two bookings sharing the key "BKG-SAME-1", the first with origin "Mumbai" and destination "New Delhi" and the second with origin "Pune" and destination "Chennai"
     When they are published to the raw topic in that order
     Then their outputs arrive in the same relative order they were published
+
+  @functional @message-contract @medium @fast @TC-49
+  Scenario: The output message timestamp reflects processing time
+    # The inbound timestamp is set to 2020 so the two possible behaviours are
+    # unambiguous: copying it through fails by years, not by milliseconds, so no
+    # clock skew can mask the result. TEST_STRATEGY 4.1 requires the choice to be
+    # stated and asserted either way; nothing asserted it before.
+    Given a booking with origin "Mumbai" and destination "Pune"
+    When it is published to the raw topic with a timestamp of "2020-01-01T00:00:00Z"
+    Then it lands on the enriched topic
+    And the output message timestamp is at or after the time it was published

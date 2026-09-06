@@ -164,6 +164,27 @@ public class PublishSteps {
                 .getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * B-9 (TC-49). The inbound timestamp is set years in the past so a copied
+     * timestamp and a freshly stamped one cannot be mistaken for each other.
+     */
+    @io.cucumber.java.en.When("it is published to the raw topic with a timestamp of {string}")
+    public void publishedWithTimestamp(String timestamp) {
+        assertThat(pendingPayload).as("no Given staged a booking to publish").isNotNull();
+        context.harness().publishAt(context.harness().rawTopic(), pendingId,
+                pendingPayload, java.time.Instant.parse(timestamp));
+        context.recordPublished(pendingId, pendingPayload, java.util.Map.of());
+        publishedAt = java.time.Instant.now();
+        pendingPayload = null;
+    }
+
+    /** When the suite handed the message to the broker, for TC-49 to compare against. */
+    private java.time.Instant publishedAt;
+
+    public java.time.Instant publishedAt() {
+        return publishedAt;
+    }
+
     @Given("a payload that is empty")
     public void anEmptyPayload() {
         stageRaw(nextId(), new byte[0]);

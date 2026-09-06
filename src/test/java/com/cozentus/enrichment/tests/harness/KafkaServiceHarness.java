@@ -96,12 +96,24 @@ public final class KafkaServiceHarness implements ServiceHarness {
         publishRaw(topic, key, payload, Map.of());
     }
 
+    @Override
+    public void publishAt(String topic, String key, String payload, java.time.Instant timestamp) {
+        publishRaw(topic, key, payload == null ? null : payload.getBytes(StandardCharsets.UTF_8),
+                Map.of(), timestamp.toEpochMilli());
+    }
+
     private void publishRaw(String topic, String key, byte[] payload, Map<String, String> headers) {
+        publishRaw(topic, key, payload, headers, null);
+    }
+
+    private void publishRaw(String topic, String key, byte[] payload,
+                            Map<String, String> headers, Long timestamp) {
         List<Header> recordHeaders = new ArrayList<>();
         headers.forEach((name, value) -> recordHeaders.add(new RecordHeader(name,
                 value == null ? null : value.getBytes(StandardCharsets.UTF_8))));
         try {
-            producer.send(new ProducerRecord<>(topic, null, key, payload, recordHeaders)).get();
+            producer.send(new ProducerRecord<>(topic, null, timestamp, key, payload,
+                    recordHeaders)).get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Interrupted publishing to " + topic, e);

@@ -50,6 +50,25 @@ public class MessageContractSteps {
         assertThat(locatedByPayload().key()).as("message key").isEqualTo(expected);
     }
 
+    /**
+     * B-9 (TC-49). The timestamp on the output was not covered at all, and the
+     * two possible behaviours are opposite: copying the inbound timestamp
+     * through, or stamping the moment of processing. TEST_STRATEGY section 4.1
+     * requires the choice to be stated and asserted either way.
+     *
+     * <p>The inbound timestamp is set to 2020, so a copied value fails this by
+     * years rather than by milliseconds and no clock skew can mask the result.
+     */
+    @Then("the output message timestamp is at or after the time it was published")
+    public void outputTimestampReflectsProcessing() {
+        ConsumedMessage message = locatedByPayload();
+
+        assertThat(message.timestamp())
+                .as("the output carries the inbound timestamp rather than the processing "
+                        + "time, so a consumer cannot tell when enrichment happened")
+                .isAfter(java.time.Instant.parse("2020-01-01T00:00:00Z"));
+    }
+
     @Then("the output message carries the correlation-id header {string}")
     public void carriesCorrelationId(String expected) {
         assertThat(locatedByPayload().header("correlation-id"))

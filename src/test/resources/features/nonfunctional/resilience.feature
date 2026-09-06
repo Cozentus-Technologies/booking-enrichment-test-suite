@@ -59,3 +59,14 @@ Feature: Resilience of the raw-topic consumer to bad input
     When it is published to the raw topic
     Then it lands on the flagged topic
     And the reason is "MALFORMED_MESSAGE"
+
+  @resilience @routing @high @slow @regression @TC-56
+  Scenario: A booking is not lost when the consumer restarts mid-batch
+    # Redelivery on restart is the whole reason offsets are committed after
+    # processing rather than before. A service that committed early would lose
+    # whatever was in flight, and until this scenario existed nothing would have
+    # noticed. The restart keeps the same consumer group and the same topics: a
+    # new group would replay from the beginning and prove nothing.
+    Given 50 bookings are published to the raw topic
+    When the service is restarted on the same consumer group before all are processed
+    Then every booking is accounted for across both output topics

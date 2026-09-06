@@ -23,6 +23,14 @@ public interface ServiceHarness extends AutoCloseable {
     /** For payloads that are not valid JSON, or not text at all. */
     void publishRaw(String topic, String key, byte[] payload);
 
+    /**
+     * Publishes with an explicit broker timestamp.
+     *
+     * <p>B-9 (TC-49) needs an inbound timestamp far enough in the past that a
+     * copied-through timestamp and a freshly stamped one cannot be confused.
+     */
+    void publishAt(String topic, String key, String payload, java.time.Instant timestamp);
+
     String rawTopic();
 
     String enrichedTopic();
