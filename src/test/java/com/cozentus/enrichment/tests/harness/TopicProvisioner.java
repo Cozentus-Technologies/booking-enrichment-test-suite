@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import org.apache.kafka.clients.admin.Admin;
@@ -76,11 +77,22 @@ public final class TopicProvisioner implements AutoCloseable {
     }
 
     public boolean exists(String topic) {
+        return topicNames().contains(topic);
+    }
+
+    /**
+     * Every topic the broker will admit to.
+     *
+     * <p>E-3: the preflight reports on three topics at once and has to say which
+     * of them is missing. Three {@link #exists} calls would be three round trips
+     * and, against a broker that goes away between them, three different answers.
+     */
+    public Set<String> topicNames() {
         try {
-            return admin.listTopics().names().get().contains(topic);
+            return admin.listTopics().names().get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return false;
+            return Set.of();
         } catch (ExecutionException e) {
             throw new IllegalStateException("Could not list topics", e.getCause());
         }
