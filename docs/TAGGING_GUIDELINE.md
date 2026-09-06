@@ -45,6 +45,28 @@ reconciliation in section 8.3.
 @nightly   long-running — the volume suite
 ```
 
+### Environment requirement — optional, but enumerated
+
+```
+@requires-service-config
+```
+
+A scenario carries this when it can only run where the suite starts the service
+itself, because it needs that service configured differently. `TC-29`, `TC-46`,
+`TC-47` and `TC-48` need the extended reference list, which holds both
+`New Delhi` and `Delhi`, so the ambiguity and precedence paths are reachable at
+all. Under `-Dsuite.env=external` the suite attaches to a deployment it does not
+control, `Hooks` excludes them before anything is provisioned, and they are
+reported as **excluded by environment** in `target/environment-exclusions.txt` -
+which is deliberately distinct from *filtered out by a tag expression* and from
+*failed*.
+
+The axis is enumerated, and `TagDiscipline` rejects any `@requires-` tag not on
+the list. That rule exists because the dangerous case is not a misspelling that
+fails loudly: a scenario tagged `@requires-extended-cities` reads to a person as
+excluded from a shared deployment and is not. It runs there, fails every time,
+and the tag is the reason nobody investigates.
+
 ### Traceability — exactly one
 
 ```
