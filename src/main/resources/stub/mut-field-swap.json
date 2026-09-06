@@ -1,0 +1,6 @@
+{
+  "name": "mut-field-swap",
+  "extends": "baseline",
+  "describes": "A destination failure is reported under the origin reason and against the origin field. One-directional on purpose: origin failures are left alone, so the mutation separates the two halves of the mirrored data set instead of turning both red at once and proving nothing about which the suite can tell apart.",
+  "behaviour": { "reportDestinationUnderOrigin": true }
+}

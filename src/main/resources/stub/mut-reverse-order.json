@@ -1,0 +1,6 @@
+{
+  "name": "mut-reverse-order",
+  "extends": "baseline",
+  "describes": "Two outputs sharing a message key are published in the opposite order to the bookings that produced them. Ordering is only defined within a partition and a shared key is the only way two outputs land on one, so this is the smallest change that breaks an order the contract fixes.",
+  "behaviour": { "reverseSharedKeyOutputs": true }
+}

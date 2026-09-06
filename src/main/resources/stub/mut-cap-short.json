@@ -1,0 +1,8 @@
+{
+  "name": "mut-cap-short",
+  "extends": "baseline",
+  "describes": "The edit-distance cap for long reference names is narrowed from two to one, so the distance-2 input stops being corrected. 'Bangalr' sits exactly on the cap rather than inside it, which is why it is the row that moves; every distance-1 correction stays green, and so do the exact and casing rows.",
+  "mappings": [
+    { "whenCity": "Bangalr", "thenTopic": "flagged", "thenReason": "UNMATCHED" }
+  ]
+}

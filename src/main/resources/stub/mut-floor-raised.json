@@ -1,0 +1,8 @@
+{
+  "name": "mut-floor-raised",
+  "extends": "baseline",
+  "describes": "The confidence floor is raised far enough to reject an input the contract accepts. The accept side of the same pair as mut-floor-lowered: 'Punr' scores above the floor and must be corrected to Pune. Exact matches are unaffected, which is what tells a floor change apart from a matcher that has stopped working altogether.",
+  "mappings": [
+    { "whenCity": "Punr", "thenTopic": "flagged", "thenReason": "UNMATCHED" }
+  ]
+}

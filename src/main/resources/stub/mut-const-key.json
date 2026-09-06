@@ -1,0 +1,6 @@
+{
+  "name": "mut-const-key",
+  "extends": "baseline",
+  "describes": "Every output carries the same message key. Downstream partitioning and per-booking ordering both depend on the key being the booking id, and a payload-level assertion cannot see the envelope, so only a step that reads the key can catch it.",
+  "behaviour": { "constantKey": "CONSTANT-KEY" }
+}

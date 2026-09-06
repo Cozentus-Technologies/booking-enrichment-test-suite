@@ -1,0 +1,6 @@
+{
+  "name": "mut-silent",
+  "extends": "baseline",
+  "describes": "Nothing is published at all. The bluntest possible break, and the one a suite is most embarrassing to miss: an assertion that compares two collections gathered from the output topics passes trivially when both are empty.",
+  "behaviour": { "silent": true }
+}

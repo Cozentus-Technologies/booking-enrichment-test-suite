@@ -1,0 +1,6 @@
+{
+  "name": "mut-double-publish",
+  "extends": "baseline",
+  "describes": "A flagged booking is published to the flagged topic and to the enriched topic as well. The flagged route is still correct, so every positive assertion about it still passes; only the negative assertion - that the booking never reaches the other topic - can see the leak.",
+  "behaviour": { "alsoPublishFlaggedToEnriched": true }
+}

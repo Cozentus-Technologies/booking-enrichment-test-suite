@@ -1,0 +1,9 @@
+{
+  "name": "mut-no-collapse",
+  "extends": "baseline",
+  "describes": "Internal runs of whitespace are no longer collapsed before comparison, so a value that should have matched exactly falls through to the fuzzy path instead. The corrected city is still right, which is the point: only the confidence assertion can see the difference, and without it the collapse could be deleted and the suite would stay green.",
+  "mappings": [
+    { "whenCity": "New   Delhi",    "thenTopic": "enriched", "thenCity": "New Delhi", "thenConfidence": 0.9384615384615385 },
+    { "whenCity": "  New   Delhi ", "thenTopic": "enriched", "thenCity": "New Delhi", "thenConfidence": 0.9384615384615385 }
+  ]
+}
