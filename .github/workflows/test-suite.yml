@@ -1,33 +1,28 @@
-# CI for the booking-enrichment black-box test suite.
+# Push and pull-request CI for the booking-enrichment black-box test suite.
 #
 # Two tiers, because they need different things:
 #
-#   unit         needs nothing. Runs on every push and pull request today.
-#                55 tests: the CSV loader, the feature generator, schema
-#                validation, the compatibility checker, the coverage reporter.
+#   unit   needs nothing at all - no broker, no service. 165 tests covering the
+#          CSV loader, the feature generator, schema validation, the
+#          compatibility checker, the report generator and the build guards.
 #
-#   integration  needs a Kafka broker AND a running service instance, which
-#                means cloning the private service repository. That needs a
-#                credential this repository does not have. Deploy keys are
-#                disabled org-wide, so the options are a fine-grained PAT stored
-#                as SERVICE_TOKEN, or enabling deploy keys for the org. Until one
-#                exists the job is skipped, not failed: a red badge for a missing
-#                credential teaches nobody anything.
+#   fast   needs a Kafka broker AND a service instance, so it clones the private
+#          service repository with a read-only deploy key (secret
+#          SERVICE_SSH_KEY) and builds the jar. Without that secret the job is
+#          skipped rather than failed: a red badge for a missing credential
+#          teaches nobody anything.
+#
+# The suite starts its own service per scenario, on its own topics and its own
+# port, so CI builds the jar and nothing more.
 name: test-suite
 
+# Triggers are push and pull request only. The scheduled bulk run lives in
+# bulk-nightly.yml and the on-demand run with its options lives in
+# manual-run.yml, so each workflow answers one question and the Actions tab
+# says which is which.
 on:
   push:
   pull_request:
-  schedule:
-    - cron: "0 2 * * *"
-  workflow_dispatch:
-    inputs:
-      profile:
-        description: "run-tests.sh profile to execute"
-        required: false
-        default: full
-        type: choice
-        options: [smoke, functional, contract, full, nightly]
 
 env:
   SERVICE_REPO: DSV-test-assignement
@@ -81,7 +76,7 @@ jobs:
     needs: unit
     # @smoke and @functional-and-@critical on every push/PR — the two-minute
     # budget in TEST_SUITE_SPEC.md section 9.4.
-    if: needs.unit.outputs.has_service_key == 'true' && github.event_name != 'schedule'
+    if: needs.unit.outputs.has_service_key == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -132,74 +127,19 @@ jobs:
             target/report-data.json
             target/test-execution-summary-report.html
 
-  nightly:
-    needs: unit
-    # @nightly volume suite — unbounded budget, scheduled separately from the
-    # fast per-commit slice above.
-    if: needs.unit.outputs.has_service_key == 'true' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.profile == 'nightly'))
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "21"
-          cache: maven
-
-      - name: Start broker
-        run: docker compose -f docker-compose.override.yml up -d --wait
-
-      - name: Authorise the read-only deploy key
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SERVICE_SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
-
-      # Only builds the jar. The suite starts its own service instance per
-      # scenario, on its own topics and its own port; a pre-started one would
-      # subscribe to the default topics that no scenario ever uses.
-      - name: Check out and build the service under test
-        run: |
-          GIT_SSH_COMMAND='ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes' \
-            git clone --depth 1 --branch "$SERVICE_REF" \
-            "git@github.com:${{ github.repository_owner }}/$SERVICE_REPO.git" service
-          cd service
-          mvn -q -DskipTests package
-          ls -l target/city-enrichment.jar
-
-      - name: Run nightly (volume) suite
-        env:
-          SUITE_ENV: ci
-        run: ./run-tests.sh nightly
-
-
-      - name: Publish reports
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: cucumber-reports-nightly
-          path: |
-            target/cucumber-reports/
-            target/allure-results/
-            target/scenario-coverage.md
-            target/report-data.json
-            target/test-execution-summary-report.html
-
   summary-report:
     # A separate phase so the Test Execution Summary Report is a first-class
     # output of the pipeline rather than one file inside a bundle of six. It
     # runs whatever the test jobs did: a failing run is exactly when someone
     # needs the report, and the suite is built so that run still produces one.
-    needs: [fast, nightly]
-    if: always() && (needs.fast.result != 'skipped' || needs.nightly.result != 'skipped')
+    needs: [fast]
+    if: always() && needs.fast.result != 'skipped'
     runs-on: ubuntu-latest
     steps:
       - name: Collect the reports the test jobs produced
         uses: actions/download-artifact@v6
         with:
-          pattern: cucumber-reports*
+          pattern: cucumber-reports
           path: collected
           merge-multiple: true
 

@@ -1,0 +1,161 @@
+# Shared implementation behind the two workflows people actually trigger:
+# bulk-nightly (scheduled) and manual-run (on demand).
+#
+# It exists so the broker, the deploy key, the service build and the report
+# publishing are defined once. Duplicating them would mean the nightly and the
+# manual run could drift apart, and the first sign of that would be a result
+# nobody could reproduce.
+name: _run-suite
+
+on:
+  workflow_call:
+    inputs:
+      profile:
+        description: "run-tests.sh profile, or 'tags' to use the tag expression instead"
+        required: true
+        type: string
+      tags:
+        description: "Cucumber tag expression, used only when profile is 'tags'"
+        required: false
+        default: ""
+        type: string
+      suite_env:
+        required: false
+        default: ci
+        type: string
+      artifact_suffix:
+        description: "Keeps artifacts from different runs apart"
+        required: false
+        default: run
+        type: string
+    secrets:
+      SERVICE_SSH_KEY:
+        required: true
+
+env:
+  SERVICE_REPO: DSV-test-assignement
+  SERVICE_REF: main
+
+jobs:
+  run:
+    name: "${{ inputs.profile == 'tags' && format('tags {0}', inputs.tags) || format('profile {0}', inputs.profile) }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # A tag expression that selects nothing already fails the build via
+      # ExecutionGuard, but failing here costs seconds instead of minutes and
+      # says plainly that the input was empty rather than that the suite broke.
+      - name: Check the request makes sense
+        run: |
+          if [ "${{ inputs.profile }}" = "tags" ] && [ -z "${{ inputs.tags }}" ]; then
+            echo "::error::profile is 'tags' but no tag expression was supplied."
+            exit 1
+          fi
+
+      - name: Start broker
+        run: docker compose -f docker-compose.override.yml up -d --wait
+
+      - name: Authorise the read-only deploy key
+        env:
+          SERVICE_SSH_KEY: ${{ secrets.SERVICE_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SERVICE_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Check out and build the service under test
+        run: |
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes' \
+            git clone --depth 1 --branch "$SERVICE_REF" \
+            "git@github.com:${{ github.repository_owner }}/$SERVICE_REPO.git" service
+          cd service
+          mvn -q -DskipTests package
+          ls -l target/city-enrichment.jar
+
+      - name: Run the suite
+        env:
+          SUITE_ENV: ${{ inputs.suite_env }}
+        run: |
+          if [ "${{ inputs.profile }}" = "tags" ]; then
+            echo "Running tag expression: ${{ inputs.tags }}"
+            mvn -B test -Pkafka -Dcucumber.filter.tags="${{ inputs.tags }}"
+          else
+            echo "Running profile: ${{ inputs.profile }}"
+            ./run-tests.sh "${{ inputs.profile }}"
+          fi
+
+      # Everything below runs even when the suite failed. A failing run is when
+      # the report is worth reading, and the suite is built to produce one.
+      - name: Publish the summary report on its own
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: summary-report-${{ inputs.artifact_suffix }}
+          path: |
+            target/test-execution-summary-report.html
+            target/report-data.json
+            target/scenario-coverage.md
+          if-no-files-found: warn
+
+      - name: Publish the full report set
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: all-reports-${{ inputs.artifact_suffix }}
+          path: |
+            target/cucumber-reports/
+            target/allure-results/
+            target/surefire-reports/
+            target/scenario-coverage.md
+            target/report-data.json
+            target/test-execution-summary-report.html
+          if-no-files-found: warn
+
+      - name: Put the headline figures in the run summary
+        if: always()
+        run: |
+          {
+            echo "## Test Execution Summary Report"
+            echo
+            if [ "${{ inputs.profile }}" = "tags" ]; then
+              echo "Selection: \`${{ inputs.tags }}\`"
+            else
+              echo "Profile: \`${{ inputs.profile }}\`"
+            fi
+            echo
+            if [ -f target/report-data.json ]; then
+              python3 - target/report-data.json <<'PY'
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          m = d.get("metrics", {})
+          def figure(key):
+              v = m.get(key)
+              if isinstance(v, dict):
+                  value, detail = v.get("value"), v.get("detail")
+                  if value is None:
+                      return "not measured"
+                  return "%s%% (%s)" % (value, detail) if detail else "%s%%" % value
+              return "not measured" if v is None else v
+          print("| Measure | Value |")
+          print("|---|---|")
+          print("| Critical pass rate | %s |" % figure("critical_pass_rate"))
+          print("| Overall pass rate | %s |" % figure("pass_rate"))
+          print("| Scenario coverage | %s |" % figure("scenario_coverage"))
+          print("| Recommendation | %s |" % d.get("report", {}).get("recommendation", "not stated"))
+          print()
+          print("Read from report-data.json, so nothing here is typed by hand.")
+          PY
+            else
+              echo "No report-data.json was produced, so no figures are available."
+            fi
+            echo
+            echo "Artifacts on this run: **summary-report-${{ inputs.artifact_suffix }}** (the HTML) and **all-reports-${{ inputs.artifact_suffix }}**."
+          } >> "$GITHUB_STEP_SUMMARY"

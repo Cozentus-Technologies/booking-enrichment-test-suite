@@ -1,0 +1,52 @@
+# The on-demand run. Trigger it from the Actions tab with the "Run workflow"
+# button and choose what to execute.
+#
+#   what = a named profile   runs that profile exactly as run-tests.sh defines it
+#   what = tags              runs the tag expression you type, e.g.
+#                              @TC-32
+#                              @city-correction
+#                              @functional and @critical
+#                              @contract or @schema
+#                              not @nightly
+#
+# A tag expression that selects nothing fails the build rather than reporting
+# success, so a typo in a tag name cannot look like a passing run.
+name: manual-run
+
+on:
+  workflow_dispatch:
+    inputs:
+      what:
+        description: "What to run"
+        required: true
+        default: full
+        type: choice
+        options:
+          - smoke
+          - functional
+          - contract
+          - full
+          - nightly
+          - tags
+      tags:
+        description: "Tag expression (used only when 'What to run' is set to tags)"
+        required: false
+        default: ""
+        type: string
+      suite_env:
+        description: "Configuration profile"
+        required: false
+        default: ci
+        type: choice
+        options: [ci, local]
+
+jobs:
+  requested:
+    uses: ./.github/workflows/_run-suite.yml
+    with:
+      profile: ${{ inputs.what }}
+      tags: ${{ inputs.tags }}
+      suite_env: ${{ inputs.suite_env }}
+      artifact_suffix: manual
+    secrets:
+      SERVICE_SSH_KEY: ${{ secrets.SERVICE_SSH_KEY }}

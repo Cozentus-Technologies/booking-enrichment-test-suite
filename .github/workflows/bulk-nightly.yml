@@ -1,0 +1,26 @@
+# The bulk run: the volume tier, on a schedule, unattended.
+#
+# It is separate from the on-demand workflow because it answers a different
+# question. The nightly asks "is anything lost, duplicated or misrouted across a
+# thousand bookings", which takes minutes and nobody waits for. The manual run
+# asks "did the thing I just changed work", and someone is watching it.
+name: bulk-nightly
+
+on:
+  schedule:
+    # 18:30 UTC is 00:00 IST. GitHub cron is UTC only and has no timezone field,
+    # so the offset is written here rather than being silently wrong twice a year
+    # for anyone reading "0 0 * * *" as local midnight.
+    - cron: "30 18 * * *"
+  workflow_dispatch:
+    # Same run, on demand, for when you do not want to wait until tonight.
+
+jobs:
+  bulk:
+    uses: ./.github/workflows/_run-suite.yml
+    with:
+      profile: nightly
+      suite_env: ci
+      artifact_suffix: nightly
+    secrets:
+      SERVICE_SSH_KEY: ${{ secrets.SERVICE_SSH_KEY }}
