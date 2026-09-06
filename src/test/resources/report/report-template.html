@@ -451,7 +451,17 @@ const C=R.cases;
 const F={ty:'',m:'',p:'',pr:'',s:''};
 const V=()=>C.filter(c=>(!F.ty||c.ty===F.ty)&&(!F.m||c.m===F.m)&&(!F.p||c.p===F.p)&&(!F.pr||c.pr===F.pr)&&(!F.s||c.s===F.s));
 const cnt=(a,s)=>a.filter(x=>x.s===s).length;
+/* Executed means the scenario ran to a verdict. Blocked and not executed are
+   both "no verdict", and counting either as executed is what let execution
+   completeness render full while most of the plan had not run. */
+const EX=c=>c.s==='pass'||c.s==='fail';
 const PRI=['Critical','High','Medium','Low'];
+/* Every figure below is either read from R or computed from R.cases. A literal
+   here is a number about a run this page never read. */
+const M=k=>R.metrics&&R.metrics[k]?R.metrics[k]:null;
+const mval=(k,fmt)=>{const m=M(k);return m&&m.value!==null&&m.value!==undefined?fmt(m.value):'not measured'};
+const mpc=k=>mval(k,v=>v+'%');
+const mdet=k=>{const m=M(k);return m?m.detail:'not measured'};
 
 /* ================= header ================= */
 function head(){
@@ -467,27 +477,43 @@ function head(){
 
 /* ================= verdict ================= */
 function verdict(){
-  const failed=R.exitCriteria.filter(x=>!x.ok);
-  const blocking=R.defects.some(d=>d.status==='Open'&&(d.severity==='S1'||C.find(c=>c.id===d.foundBy)?.p==='Critical'));
-  const st=blocking?'stop':failed.length?'hold':'go';
-  const v={go:'Proceed',hold:'Proceed with conditions',stop:'Hold release'}[st];
-  const n={
-    go:'All exit criteria met. No open defect affects a critical path.',
-    stop:'A critical test case failed or an S1 defect is open. The release does not proceed.',
-    hold:`${failed.length} of ${R.exitCriteria.length} exit criteria unmet. Release may proceed only with product owner sign-off and a named owner and fix date for each open defect.`
-  }[st];
+  /* The recommendation is decided once, by ExitCriteria.recommend, weighing
+     each criterion's blocking flag against the defect register. Recomputing it
+     here from open defects alone printed "proceed" over runs the generator had
+     already held. */
+  const st=R.report.recommendation;
+  const v={go:'Proceed',hold:'Proceed with conditions',stop:'Hold release'}[st]||'Not determined';
+  const failed=R.exitCriteria.filter(x=>!x.ok), blk=failed.filter(x=>x.blocking);
+  const openBlocking=R.defects.filter(d=>d.status==='Open'&&d.impact==='Blocking');
+  const n=blk.length
+    ? `${blk.length} of ${R.exitCriteria.length} exit criteria are blocking and unmet: ${blk.map(x=>x.c).join('; ')}.`
+    : openBlocking.length
+      ? `${openBlocking.length} open defect(s) classified blocking: ${openBlocking.map(d=>d.id).join(', ')}.`
+      : failed.length
+        ? `${failed.length} of ${R.exitCriteria.length} exit criteria unmet. Release may proceed only with product owner sign-off and a named owner and fix date for each open defect.`
+        : 'All exit criteria met. No open defect affects a critical path.';
   $('#rec').dataset.v=st; $('#recV').textContent=v; $('#recN').textContent=n;
 
-  const ex=C.filter(c=>c.s!=='skipped'), ps=cnt(C,'pass'), fl=cnt(C,'fail');
-  const cr=C.filter(c=>c.p==='Critical'&&c.s!=='skipped');
+  const ex=C.filter(EX), ps=cnt(C,'pass'), fl=cnt(C,'fail'), bl=cnt(C,'blocked');
+  const cr=C.filter(c=>c.p==='Critical'&&EX(c)), crf=cr.filter(c=>c.s==='fail');
   const open=R.defects.filter(d=>d.status==='Open');
   $('#execText').textContent=
     `${R.report.cycle} executed ${ex.length} of ${C.length} planned test cases against ${R.report.build} in the ${R.report.environment} environment, `+
-    `completing in ${dur(R.report.duration)}. ${ps} passed and ${fl} failed, giving an overall pass rate of ${pc(ps,ex.length)}%. `+
-    `All ${cr.length} critical test cases passed.`;
+    `completing in ${dur(R.report.duration)}. ${ps} passed, ${fl} failed`+(bl?`, ${bl} blocked`:'')+
+    `, giving an overall pass rate of ${pc(ps,ex.length)}%. `+
+    (!cr.length?'No critical test case was executed in this run.'
+      :crf.length?`${crf.length} of ${cr.length} executed critical cases failed: ${crf.map(c=>c.id).join(', ')}.`
+      :`Every one of the ${cr.length} executed critical cases reached a passing verdict.`);
+  const sev={};open.forEach(d=>sev[d.severity]=(sev[d.severity]||0)+1);
+  const bySeverity=Object.keys(sev).sort().map(k=>`${sev[k]} at ${k}`).join(', ');
   $('#execText2').textContent=
-    `${open.length} defects remain open, both at severity S2. Neither was raised against a critical test case, so neither blocks the release outright; `+
-    `however the concurrent-publisher message loss recorded in DEF-312 carries a business priority of P1 and should be understood before production ingestion is enabled.`;
+    (open.length
+      ? `${open.length} defect(s) remain open (${bySeverity}). `+
+        (openBlocking.length
+          ? `${openBlocking.map(d=>d.id).join(', ')} classified blocking against a critical test case or at severity S1.`
+          : 'None is classified blocking; each still needs a named owner and an agreed fix date.')
+      : 'No defect remains open in the register.')+
+    ` Coverage in this report is scenario coverage against spec/test-cases.yaml; code coverage is out of scope and belongs to the development team's own unit tests.`;
   $('#signHint').textContent=n;
 }
 
@@ -506,8 +532,8 @@ function fills(){
 
 /* ================= section 5 ================= */
 function summary(v){
-  const ex=v.filter(c=>c.s!=='skipped'),ps=cnt(v,'pass'),fl=cnt(v,'fail'),bl=cnt(v,'blocked'),sk=cnt(v,'skipped');
-  const cr=v.filter(c=>c.p==='Critical'&&c.s!=='skipped'),crp=cr.filter(c=>c.s==='pass').length;
+  const ex=v.filter(EX),ps=cnt(v,'pass'),fl=cnt(v,'fail'),bl=cnt(v,'blocked'),sk=cnt(v,'skipped');
+  const cr=v.filter(c=>c.p==='Critical'&&EX(c)),crp=cr.filter(c=>c.s==='pass').length;
   const open=R.defects.filter(d=>d.status==='Open').length;
   $('#mx').innerHTML=[
     {b:v.length,s:'Test cases planned',e:`${ex.length} executed`},
@@ -521,8 +547,8 @@ function summary(v){
   $('#statusBody').innerHTML=[
     ['Passed',ps],['Failed',fl],['Blocked',bl],['Not executed',sk]
   ].map(([k,n])=>`<tr><td>${k}</td><td class="n">${n}</td><td class="n">${pc(n,v.length)}%</td>
-     <td class="n">${k==='Not executed'?'—':pc(n,ex.length)+'%'}</td></tr>`).join('')
-   +`<tr class="tot"><td>Total planned</td><td class="n">${v.length}</td><td class="n">100%</td><td class="n">—</td></tr>`;
+     <td class="n">${k==='Not executed'||k==='Blocked'?'—':pc(n,ex.length)+'%'}</td></tr>`).join('')
+   +`<tr class="tot"><td>Total planned</td><td class="n">${v.length}</td><td class="n">${pc(v.length,v.length)}%</td><td class="n">—</td></tr>`;
 
   bars(v,'p','#barsPri',PRI);
 }
@@ -540,9 +566,24 @@ function bars(v,key,tgt,order){
 }
 function trend(){
   const h=R.history,W=450,H=146,pd=28;
-  const x=i=>pd+i*(W-pd*2)/(h.length-1), y=v=>H-pd-((v-88)/12)*(H-pd*2);
+  /* A first run has one entry, or none. Reading h[h.length-2] there threw, and
+     because every remaining section was drawn after this one, the whole page
+     below the trend chart rendered blank. */
+  if(!h||h.length<2){
+    $('#trend').innerHTML='';
+    $('#trendKey').textContent=h&&h.length
+      ? 'One run on record. A trend needs a second cycle to compare against.'
+      : 'No runs on record yet. The trend appears once a second cycle has been recorded.';
+    return;
+  }
+  /* The y-axis is read off the data. Fixed at 88-100 it silently clipped any
+     cycle that fell below 88, which is precisely the cycle worth seeing. */
+  const vals=h.flatMap(d=>[d.overall,d.critical]).filter(n=>typeof n==='number');
+  const lo=Math.max(0,Math.floor(Math.min(...vals)/4)*4-4), hi=Math.min(100,Math.ceil(Math.max(...vals)/4)*4);
+  const span=hi-lo||1, ticks=[0,1,2,3].map(i=>Math.round(lo+span*i/3));
+  const x=i=>pd+i*(W-pd*2)/(h.length-1), y=v=>H-pd-((v-lo)/span)*(H-pd*2);
   const ln=k=>h.map((d,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(d[k]).toFixed(1)}`).join(' ');
-  $('#trend').innerHTML=[88,92,96,100].map(g=>
+  $('#trend').innerHTML=ticks.map(g=>
     `<line x1="${pd}" y1="${y(g)}" x2="${W-pd}" y2="${y(g)}" stroke="var(--rule2)"/>
      <text x="${pd-7}" y="${y(g)+4}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="var(--mono)">${g}</text>`).join('')
     +`<path d="${ln('overall')}" fill="none" stroke="var(--ink2)" stroke-width="1.5" stroke-dasharray="4 3"/>`
@@ -558,9 +599,11 @@ function modules(v){
   const mods=[...new Set(C.map(c=>c.m))].filter(m=>v.some(c=>c.m===m));
   let T={pl:0,ex:0,ps:0,fl:0,sk:0,df:0};
   $('#modBody').innerHTML=mods.map(m=>{
-    const g=v.filter(c=>c.m===m),ex=g.filter(c=>c.s!=='skipped').length;
+    const g=v.filter(c=>c.m===m),ex=g.filter(EX).length;
     const ps=cnt(g,'pass'),fl=cnt(g,'fail'),sk=cnt(g,'skipped');
-    const df=R.defects.filter(d=>d.module===m).length;
+    /* d.dm is the defect's module in the catalogue's vocabulary. d.module is
+       the register's own layering and matched almost nothing. */
+    const df=R.defects.filter(d=>d.dm===m).length;
     T={pl:T.pl+g.length,ex:T.ex+ex,ps:T.ps+ps,fl:T.fl+fl,sk:T.sk+sk,df:T.df+df};
     return `<tr><td>${esc(m)}</td><td class="n">${g.length}</td><td class="n">${ex}</td><td class="n">${ps}</td>
       <td class="n"${fl?' style="color:var(--fail);font-weight:600"':''}>${fl}</td><td class="n">${sk}</td>
@@ -619,7 +662,7 @@ function trace(v){
   $('#rtmBody').innerHTML=R.requirements.map(r=>{
     const ids=idsFor(r.cases);
     const g=C.filter(c=>ids.includes(c.id));
-    const ex=g.filter(c=>c.s!=='skipped').length,ps=cnt(g,'pass'),fl=cnt(g,'fail');
+    const ex=g.filter(EX).length,ps=cnt(g,'pass'),fl=cnt(g,'fail');
     const cov=pc(ex,g.length);
     const vd=fl?'<span class="pill pf">Not met</span>':cov<100?'<span class="pill pw">Partially verified</span>':'<span class="pill pp">Verified</span>';
     return `<tr class="${fl?'f':''}"><td class="m">${esc(r.id)}</td><td>${esc(r.desc)}</td>
@@ -628,13 +671,15 @@ function trace(v){
       <td class="n">${cov}%</td><td>${vd}</td></tr>`;
   }).join('');
 
-  const ex=C.filter(c=>c.s!=='skipped'),reqOk=R.requirements.filter(r=>{
+  const ex=C.filter(EX),reqOk=R.requirements.filter(r=>{
     const g=C.filter(c=>idsFor(r.cases).includes(c.id));return g.length&&g.every(c=>c.s==='pass')}).length;
   $('#covMx').innerHTML=[
     {b:`${reqOk}/${R.requirements.length}`,s:'Requirements fully verified',e:'all mapped cases passed',c:reqOk===R.requirements.length?'g':'a'},
-    {b:'100%',s:'Requirement coverage',e:'every requirement has cases',c:'g'},
-    {b:`${pc(ex.length,C.length)}%`,s:'Scenario coverage',e:`${ex.length} of ${C.length} executed`,c:'a'},
-    {b:'—',s:'Code coverage',e:'not applicable to black box'}
+    {b:mpc('requirement_coverage'),s:'Requirement coverage',e:mdet('requirement_coverage'),
+     c:M('requirement_coverage')&&M('requirement_coverage').value===100?'g':'a'},
+    {b:mpc('scenario_coverage'),s:'Scenario coverage',e:`${mdet('scenario_coverage')} against spec/test-cases.yaml`,
+     c:M('scenario_coverage')&&M('scenario_coverage').value===100?'g':'a'},
+    {b:'—',s:'Code coverage',e:'out of scope for a black-box suite'}
   ].map(k=>`<div class="${k.c||''}"><b>${esc(k.b)}</b><small>${esc(k.s)}</small><em>${esc(k.e)}</em></div>`).join('');
 
   const sk=v.filter(c=>c.s==='skipped');
@@ -654,21 +699,28 @@ function idsFor(spec){
 
 /* ================= sections 11-12 ================= */
 function metrics(v){
-  const ex=C.filter(c=>c.s!=='skipped'),ps=cnt(C,'pass'),fl=cnt(C,'fail');
-  const found=R.defects.length, closed=R.defects.filter(d=>d.status.includes('closed')).length;
+  /* Every row is the reporter's own metric: its value, its formula and the
+     numbers it was computed from. The value and the commentary that used to
+     sit here were sentences about some other run, typed once and never
+     recomputed, so they stayed true only by coincidence. */
+  const asPc=n=>n+'%', as2=n=>Number(n).toFixed(2), as1=n=>Number(n).toFixed(1);
   const rows=[
-    ['Test case execution','executed ÷ planned',`${pc(ex.length,C.length)}%`,'Above the 95% completion target.'],
-    ['Pass rate','passed ÷ executed',`${pc(ps,ex.length)}%`,'Two failures, both raised as defects.'],
-    ['Critical pass rate','critical passed ÷ critical executed','100%','Release-governing metric. Met.'],
-    ['Test case effectiveness','defects found ÷ cases executed',`${(found/ex.length).toFixed(2)}`,'Five defects across sixty-four executed cases.'],
-    ['Defect density','defects ÷ 10 cases executed',`${(found/ex.length*10).toFixed(1)}`,'Concentrated in message contract and volume.'],
-    ['Defect removal efficiency','closed ÷ found this cycle',`${pc(closed,found)}%`,'Two of five closed and re-verified.'],
-    ['Defect leakage','escaped from prior cycles','0','No defect from an earlier cycle reached this one.'],
-    ['Automation stability','non-flaky runs ÷ total runs','100%','No test case quarantined this cycle.'],
-    ['Mean time to detect','execution start to first failure','2m 41s','Volume failure surfaced late in the cycle.']
+    ['Test case execution','test_case_execution',asPc],
+    ['Pass rate','pass_rate',asPc],
+    ['Critical pass rate','critical_pass_rate',asPc],
+    ['Critical execution rate','critical_execution_rate',asPc],
+    ['Test case effectiveness','test_case_effectiveness',as2],
+    ['Defect density','defect_density',as2],
+    ['Defect removal efficiency','defect_removal_efficiency',asPc],
+    ['Defect leakage','defect_leakage',asPc],
+    ['Automation stability','automation_stability',asPc],
+    ['Mean time to detect','mean_time_to_detect',dur]
   ];
-  $('#qualBody').innerHTML=rows.map(r=>`<tr><td>${esc(r[0])}</td><td style="color:var(--muted)">${esc(r[1])}</td>
-    <td class="n"><b>${esc(r[2])}</b></td><td>${esc(r[3])}</td></tr>`).join('');
+  $('#qualBody').innerHTML=rows.map(([label,key,fmt])=>{
+    const m=M(key);
+    return `<tr><td>${esc(label)}</td><td style="color:var(--muted)">${esc(m?m.formula:'not computed')}</td>
+      <td class="n"><b>${esc(mval(key,fmt))}</b></td><td>${esc(m?m.detail:'not computed')}</td></tr>`;
+  }).join('');
 
   $('#budBody').innerHTML=R.budgets.map(b=>{
     const over=b.budget&&b.duration>b.budget, near=b.budget&&!over&&b.duration>b.budget*.85;
@@ -700,10 +752,12 @@ function detail(v){
       <td>${esc(c.p)}</td><td>${esc(c.pr)}</td><td>${pill}</td>
       <td class="n">${c.d?dur(c.d):'—'}</td><td class="m">${c.defect?esc(c.defect):''}</td></tr>`
       +(c.s==='fail'?`<tr class="dt" id="x-${esc(c.id)}" hidden><td colspan="9"><div class="dg">
-        <div><h4>Assertion that failed</h4><pre>${esc(c.why||'')}</pre></div>
-        <div><h4>Published to booking.raw</h4><pre>${esc(c.pub||'')}</pre></div>
-        <div><h4>Observed on the output topic</h4><pre>${esc(c.obs||'')}</pre></div>
-      </div></td></tr>`:'');
+        <div><h4>Assertion that failed</h4><pre>${esc(c.why||'No assertion message was recorded.')}</pre></div>
+        <div><h4>Published to booking.raw</h4><pre>${esc(c.pub||'No published payload was attached.')}</pre></div>
+        <div><h4>Observed on the output topic</h4><pre>${esc(c.obs||'Nothing was observed on either output topic.')}</pre></div>`
+        +(c.env?`<div><h4>Message envelope</h4><pre>${esc(c.env)}</pre></div>`:'')
+        +(c.log?`<div><h4>Service log</h4><pre>${esc(c.log)}</pre></div>`:'')
+      +`</div></td></tr>`:'');
   }).join('');
   document.querySelectorAll('.xp').forEach(b=>b.addEventListener('click',()=>{
     const r=$('#x-'+b.dataset.id),open=r.hasAttribute('hidden');
