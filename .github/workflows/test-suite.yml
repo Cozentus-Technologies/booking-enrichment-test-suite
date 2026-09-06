@@ -129,6 +129,8 @@ jobs:
             target/cucumber-reports/
             target/allure-results/
             target/scenario-coverage.md
+            target/report-data.json
+            target/test-execution-summary-report.html
 
   nightly:
     needs: unit
@@ -182,3 +184,5 @@ jobs:
             target/cucumber-reports/
             target/allure-results/
             target/scenario-coverage.md
+            target/report-data.json
+            target/test-execution-summary-report.html
