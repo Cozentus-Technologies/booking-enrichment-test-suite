@@ -38,8 +38,24 @@ jobs:
   unit:
     name: Suite's own tests (no broker, no service)
     runs-on: ubuntu-latest
+    outputs:
+      # A job-level `if` cannot read the secrets context, so whether the
+      # credential exists is published here and the integration jobs gate on it.
+      has_service_token: ${{ steps.credential.outputs.present }}
     steps:
       - uses: actions/checkout@v5
+
+      - name: Is a service credential configured?
+        id: credential
+        run: |
+          if [ -n "${SERVICE_TOKEN}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "SERVICE_TOKEN is set; the integration jobs will run."
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::SERVICE_TOKEN is not set, so the integration jobs are skipped."
+            echo "They need to clone the private service repository to build and start it."
+          fi
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -65,7 +81,7 @@ jobs:
     needs: unit
     # @smoke and @functional-and-@critical on every push/PR — the two-minute
     # budget in TEST_SUITE_SPEC.md section 9.4.
-    if: needs.unit.result == 'success' && github.event_name != 'schedule'
+    if: needs.unit.outputs.has_service_token == 'true' && github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -118,7 +134,7 @@ jobs:
     needs: unit
     # @nightly volume suite — unbounded budget, scheduled separately from the
     # fast per-commit slice above.
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.profile == 'nightly')
+    if: needs.unit.outputs.has_service_token == 'true' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.profile == 'nightly'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
