@@ -55,6 +55,31 @@ is active (`-Dsuite.env=<name>`, defaulting to `local`) — see
 configuration values (broker, topics, readiness URL) and the suite runs
 against a service someone else deployed, no source change required.
 
+**What each profile assumes:**
+
+- `local` — Kafka and the service are both started and owned by this run;
+  topics are provisioned per scenario and deleted afterwards, so scenarios
+  are fully isolated from each other and from any other run.
+- `ci` — same isolation guarantee as `local`; only host names and the
+  pipeline's own startup steps differ. Timeouts stay identical to `local`
+  on purpose (`test-ci.properties`) — a busier runner is a pipeline problem,
+  not a reason to widen a contract timeout.
+- `external` — broker and service are already running and assumed ready;
+  `service.jar.path` is unused. Topic values name the deployment's real,
+  fixed topics rather than a per-scenario prefix, so **scenario isolation
+  by unique topic is unavailable** — scenarios correlate purely by
+  `bookingId` and must tolerate other traffic on those topics. Timeouts are
+  widened relative to `local` to allow for a genuinely slower remote
+  broker. See `config/test-external.properties` for the full reasoning
+  per key.
+
+Select a profile with one flag or one environment variable:
+
+```bash
+mvn test -Dsuite.env=external -Dcucumber.filter.tags="@smoke"
+SUITE_ENV=external ./run-tests.sh smoke
+```
+
 ## Running the suite
 
 ```bash

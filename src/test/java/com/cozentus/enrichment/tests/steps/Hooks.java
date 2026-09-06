@@ -3,6 +3,7 @@ package com.cozentus.enrichment.tests.steps;
 import com.cozentus.enrichment.tests.harness.KafkaServiceHarness;
 import com.cozentus.enrichment.tests.harness.ServiceController;
 import com.cozentus.enrichment.tests.harness.TopicProvisioner;
+import com.cozentus.enrichment.tests.support.EntryCriteria;
 import com.cozentus.enrichment.tests.support.ScenarioContext;
 import com.cozentus.enrichment.tests.support.TestConfig;
 import io.cucumber.java.After;
@@ -32,6 +33,13 @@ public class Hooks {
     private static final Map<String, String> CITIES_BY_TAG = Map.of(
             "@TC-29", "inline:Mumbai,New Delhi,Bangalore,Chennai,Kolkata,Pune,Hyderabad,Ahmedabad,Delhi");
 
+    /**
+     * F-21: entry criteria are verified once, before the first scenario runs.
+     * A misconfigured environment otherwise surfaces as sixty-odd confusing
+     * scenario failures instead of one clear statement of what is not ready.
+     */
+    private static volatile boolean entryCriteriaChecked = false;
+
     private final ScenarioContext context;
 
     public Hooks(ScenarioContext context) {
@@ -41,6 +49,7 @@ public class Hooks {
     @Before
     public void startIsolatedService(Scenario scenario) {
         TestConfig config = TestConfig.load();
+        verifyEntryCriteriaOnce(config);
         String scenarioId = TopicProvisioner.newScenarioId();
 
         try {
@@ -58,6 +67,21 @@ public class Hooks {
                     ? prerequisiteFailed.toString()
                     : prerequisiteFailed.getMessage());
             throw prerequisiteFailed;
+        }
+    }
+
+    private static synchronized void verifyEntryCriteriaOnce(TestConfig config) {
+        if (entryCriteriaChecked) {
+            return;
+        }
+        entryCriteriaChecked = true;
+
+        EntryCriteria.Report report = EntryCriteria.run(config);
+        report.lines().forEach(line -> System.out.println("  " + line));
+        if (!report.allPassed()) {
+            throw new IllegalStateException(
+                    "Entry criteria not met, so the run cannot be trusted:\n"
+                            + String.join("\n", report.lines()));
         }
     }
 
