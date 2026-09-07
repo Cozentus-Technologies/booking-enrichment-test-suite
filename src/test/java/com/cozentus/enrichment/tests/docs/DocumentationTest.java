@@ -23,14 +23,34 @@ import org.junit.jupiter.api.Test;
  */
 class DocumentationTest {
 
-    private static final List<Path> DOCS = List.of(
-            Path.of("README.md"),
-            Path.of("docs/TAGGING_GUIDELINE.md"),
-            Path.of("docs/TEST_STRATEGY.md"));
+    /**
+     * The documents this checks, filtered to the ones present.
+     *
+     * <p>A hard-coded list breaks any checkout that ships a subset - the
+     * code-only share, for instance, carries no strategy document. Filtering
+     * keeps one implementation across branches instead of a list that has to be
+     * edited per branch and then drifts. It cannot pass vacuously: an empty
+     * result fails, so removing every document is a failure rather than a
+     * silent success.
+     */
+    private static final List<Path> DOCS = java.util.stream.Stream.of(
+                    Path.of("README.md"),
+                    Path.of("docs/TAGGING_GUIDELINE.md"),
+                    Path.of("docs/TEST_STRATEGY.md"))
+            .filter(Files::exists)
+            .toList();
 
     private static final Path SCRIPT = Path.of("run-tests.sh");
 
     private static final List<Set<String>> SCENARIOS = DocumentedCommands.scenarioTags();
+
+    @Test
+    @DisplayName("there is documentation to check")
+    void thereAreDocumentsToCheck() {
+        assertThat(DOCS)
+                .as("no documents were found, so every check below would pass vacuously")
+                .isNotEmpty();
+    }
 
     @Test
     @DisplayName("the suite has scenarios to check the documentation against")
